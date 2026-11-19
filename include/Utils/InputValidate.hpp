@@ -54,6 +54,7 @@ class InputValidate {
         T value;
         if (!message.empty()) std::cout << message;
         if (read_line) {
+            // need update..
             // std::cin.ignore(std::numeric_limits<std::streamsize>::max(),
             // '\n');
             std::cin >> value;

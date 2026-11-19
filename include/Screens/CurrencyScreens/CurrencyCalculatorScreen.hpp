@@ -17,29 +17,31 @@ class CurrencyCalculatorScreen : protected Screen {
             system(Config::clear.c_str());
             draw_screen_header("Currency Calculator Screen.");
             Currency first_currency =
-                get_currency("\nPlease enter first currency code: ");
-            Currency second_currency =
-                get_currency("\nPlease enter second currency code: ");
-
-            float amount =
-                InputValidate::input<float>("\nEnter Amount to Exchange: : ",
-                                            "Invalid, Amount to Exchange: ");
-
-            std::cout << "\nConvert from: ";
+                get_currency("[+] Please enter first currency code: ");
+            std::cout << "\n";
             print_currency(first_currency);
 
-            if (second_currency.getCurrencyCode() != "USD") {
-                std::cout << "\nTo: ";
-                print_currency(second_currency);
-            }
-            std::cout << amount << " " << first_currency.getCurrencyCode()
-                      << " = "
+            Currency second_currency =
+                get_currency("[+] Please enter second currency code: ");
+            std::cout << "\n";
+            print_currency(second_currency);
+
+            std::cout << "\n";
+            float amount = InputValidate::input<float>(
+                std::string(30, ' ') + "[+] Enter Amount to Exchange: : ",
+                std::string(30, ' ') + "[!] " +
+                    Color::bright_red("Invalid, Amount to Exchange: "));
+
+            std::cout << "\n" << std::setw(30) << std::left << "";
+            std::cout << "[#] " << amount << " "
+                      << first_currency.getCurrencyCode() << " = "
                       << first_currency.convert_to_other_currency(
                              amount, second_currency)
                       << " " << second_currency.getCurrencyCode() << std::endl;
 
+            std::cout << "\n" << std::setw(30) << std::left << "";
             char answer = InputValidate::read_template<char>(
-                "\nDo you want to perform another calculation y/n: ");
+                "[?] Do you want to perform another calculation y/n: ");
             if (std::tolower(answer) != 'y') {
                 break;
             }
@@ -52,22 +54,43 @@ class CurrencyCalculatorScreen : protected Screen {
         std::string currency_code = "";
         Currency currency = Currency::get_empty_object();
         while (currency.is_empty()) {
+            std::cout << "\n" << std::setw(30) << std::left << "";
             std::cout << message;
             std::cin >> currency_code;
-            currency = Currency::find_by_code(currency_code);
+            currency = Currency::find_by_code(currency_code).response;
         }
 
         return currency;
     }
 
+    static std::string format_balance(std::string balance) {
+        short zero = 0;
+        for (short i = short(balance.find(".")); i < balance.size(); i++) {
+            if (zero == 3) {
+                return balance.substr(0, i - 1);
+            }
+            if (balance[i] == '0') {
+                zero++;
+            } else {
+                zero = 0;
+            }
+        }
+        return "0.0";
+    };
+
     static void print_currency(Currency currency) {
-        std::cout << "\nCurrency Card: \n";
-        std::cout << "____________________________________\n";
-        std::cout << "\nCountry    : " << currency.getCountry();
-        std::cout << "\nCode       : " << currency.getCurrencyCode();
-        std::cout << "\nName       : " << currency.getCurrencyName();
-        std::cout << "\nRate(1$)   : " << currency.getRate();
-        std::cout << "\n____________________________________\n" << std::endl;
+        Table table{"Currency Card."};
+        table.add_column("", 16);
+        table.add_column(" info ", 45, Table::Align::Center);
+
+        table.add_row({" Country", " " + currency.getCountry()});
+        table.add_row({" Code", " " + currency.getCurrencyCode()});
+        table.add_row({" Name", " " + currency.getCurrencyName()});
+        table.add_row({" Rate(1$)", " " + format_balance(std::to_string(
+                                              currency.getRate()))});
+
+        table.setAlignment(25);
+        table.print_table();
     }
 };
 

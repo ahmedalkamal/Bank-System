@@ -8,58 +8,34 @@
 #include "../Core/Date.hpp"
 #include "../Core/User.hpp"
 #include "../Global/Sessions.hpp"
+#include "../Utils/Color.hpp"
+#include "../Utils/Table.hpp"
 
 class Screen {
    protected:
-    static void draw_screen_header(std::string title, std::string subtitle = "",
-                                   short width = 37) {
-        std::cout << std::setw(width) << std::left << ""
-                  << "\t_______________________________________________"
-                     "_________";
-        std::cout << "\n\n"
-                  << std::setw(width + 20) << std::left << "" << title << "\n";
-        if (!subtitle.empty()) {
-            std::cout << std::setw(width + 20) << std::left << "" << subtitle
-                      << "\n";
-        }
-        std::cout << std::setw(width) << std::left << ""
-                  << "\t_____________________________________________"
-                     "___________\n\n";
-
-        std::cout << std::setw(width + 3) << std::left << ""
-                  << "User: "
-                  << (CurrentUser.getUserName().empty()
-                          ? "Login Please!"
-                          : CurrentUser.getUserName())
-                  << "\n";
-        std::cout << std::setw(width + 3) << std::left << ""
-                  << "Date: " << Date::date_format(Date::get_system_date())
-                  << "\n"
-                  << std::endl;
-        ;
+    static void draw_screen_header(std::string title,
+                                   std::string subtitle = "") {
+        bool is_empty = CurrentUser.getUserName().empty();
+        Table table;
+        table.panel(
+            {title, subtitle},
+            {Date::date_format(Date::get_system_date(), "%y-%m-%d"),
+             Date::get_system_time()},
+            {(is_empty ? Color::red("NO USER") : Color::green("WELCOME")),
+             (is_empty ? "please login" : CurrentUser.getUserName())},
+            120, Table::Align::Center);
     }
 
     static bool has_permission(User::Permissions permission) {
-        if (CurrentUser.check_access_permission(permission)) {
+        if (CurrentUser.check_access_permission(permission).issuccessful()) {
             return true;
         } else {
-            // std::string title = "Access Denied!";
-            // std::string subtitle = "Contact your admin.";
-
-            std::cout << std::setw(37) << std::left << ""
-                      << "\t_______________________________________________"
-                         "_________";
-            std::cout << "\n\n"
-                      << std::setw(37) << std::left << ""
-                      << "\t\tAccess Denied! Contact your admin."
-                      << "\n";
-
-            std::cout << std::setw(37) << std::left << ""
-                      << "\t_____________________________________________"
-                         "___________\n\n";
-
+            Table table;
+            table.panel(
+                {"", Color::bright_red("Access Denied! Contact your admin."),
+                 ""},
+                120, Table::Align::Center);
             return false;
-            // std::cout << ""
         }
     }
 };

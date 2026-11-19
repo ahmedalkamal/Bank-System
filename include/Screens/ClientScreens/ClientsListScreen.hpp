@@ -12,60 +12,61 @@
 class ClientsListScreen : protected Screen {
    public:
     static void show_clients_list() {
-        if (!has_permission(User::Permissions::ListClients)) {
-            return;
-        }
-        std::vector<BankClient> clients = BankClient::get_clients_list();
+        std::vector<BankClient> clients =
+            BankClient::get_clients_list().response;
         std::string title = "Clients List Screen.";
         std::string subtitle =
             "(" + std::to_string(clients.size()) + ") Client(s).";
-        draw_screen_header(title, subtitle, 27);
 
-        std::cout
-            << "\n"
-            << std::setw(8) << ""
-            << "__________________________________________________________"
-               "______________________________________\n\n";
+        draw_screen_header(title, subtitle);
+        if (!has_permission(User::Permissions::ListClients)) {
+            return;
+        }
 
-        std::cout << std::setw(8) << std::left << "" << "| " << std::setw(15)
-                  << "Accout Number";
-        std::cout << "| " << std::left << std::setw(20) << "Client Name";
-        std::cout << "| " << std::left << std::setw(12) << "Phone";
-        std::cout << "| " << std::left << std::setw(20) << "Email";
-        std::cout << "| " << std::left << std::setw(10) << "Pin Code";
-        std::cout << "| " << std::left << std::setw(12) << "Balance";
-        std::cout
-            << "\n"
-            << std::setw(8) << ""
-            << "__________________________________________________________"
-               "______________________________________\n\n";
+        Table table{title, subtitle};
+        table.setAlignment(11);
+
+        table.add_column("Account Number", 15, Table::Align::Center);
+        table.add_column("Full Name", 20, Table::Align::Center);
+        table.add_column("Phone", 12, Table::Align::Center);
+        table.add_column("Email", 20, Table::Align::Center);
+        table.add_column("Pin Code", 9, Table::Align::Center);
+        table.add_column("Balance", 14, Table::Align::Center);
 
         if (clients.size() == 0) {
-            std::cout << "No Clients Available In The System!";
+            table.panel(
+                {Color::bright_red("No Clients Available In The System!")}, 95,
+                Table::Align::Center, true);
         } else {
             for (BankClient client : clients) {
-                print_client_record_line(client);
-                std::cout << std::endl;
+                table.add_row({
+                    " " + client.getAccountNumber(),
+                    " " + client.getFullName(),
+                    " " + client.getPhone(),
+                    " " + client.getEmail(),
+                    " " + client.getPinCode(),
+                    " " + format_balance(std::to_string(client.getBalance())),
+                });
             }
+            table.print_table();
         }
-        std::cout
-            << "\n"
-            << std::setw(8) << ""
-            << "__________________________________________________________"
-               "______________________________________\n"
-            << std::endl;
     }
 
    private:
-    static void print_client_record_line(BankClient& client) {
-        std::cout << std::setw(8) << std::left << "" << "| " << std::setw(15)
-                  << client.getAccountNumber();
-        std::cout << "| " << std::setw(20) << std::left << client.getFullName();
-        std::cout << "| " << std::setw(12) << std::left << client.getPhone();
-        std::cout << "| " << std::setw(20) << std::left << client.getEmail();
-        std::cout << "| " << std::setw(10) << std::left << client.getPinCode();
-        std::cout << "| " << std::setw(12) << std::left << client.getBalance();
-    }
+    static std::string format_balance(std::string balance) {
+        short zero = 0;
+        for (short i = short(balance.find(".")); i < balance.size(); i++) {
+            if (zero == 3) {
+                return balance.substr(0, i - 1);
+            }
+            if (balance[i] == '0') {
+                zero++;
+            } else {
+                zero = 0;
+            }
+        }
+        return "0.0";
+    };
 };
 
 #endif  // CLASS_CLIENTS_LIST_SCREEN_HPP

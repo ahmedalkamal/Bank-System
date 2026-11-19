@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../Global/Config.hpp"
+#include "../Global/ResultStatus.hpp"
 #include "../Utils/String.hpp"
 #include "Files.hpp"
 #include "Property.hpp"
@@ -62,19 +63,19 @@ class Currency {
         return in_usd * currency.getRate();
     }
 
-    static Currency find_by_code(std::string currency_code) {
+    static Status<Currency> find_by_code(std::string currency_code) {
         return find(currency_code, Currency::FindBy::CurrencyCode);
     }
-    static Currency find_by_country(std::string country) {
+    static Status<Currency> find_by_country(std::string country) {
         return find(country, Currency::FindBy::Country);
     }
 
     static bool is_currency_exist(std::string currency_code) {
-        Currency currency = Currency::find_by_code(currency_code);
-        return !currency.is_empty();
+        Status<Currency> currency = Currency::find_by_code(currency_code);
+        return !currency.response.is_empty();
     }
 
-    static std::vector<Currency> get_currency_list() {
+    static Status<std::vector<Currency>> get_currency_list() {
         return load_currencies_object_data();
     }
 
@@ -87,8 +88,8 @@ class Currency {
     std::string currency_name_;
     float rate_;
 
-    static Currency convert_to_currency_object(std::string line,
-                                               std::string sep = "#//#") {
+    static Currency convert_to_currency_object(
+        std::string line, std::string sep = Config::separator) {
         std::vector<std::string> currency_date = String::split(line, sep);
 
         return Currency{
@@ -100,8 +101,8 @@ class Currency {
         };
     }
 
-    static std::string convert_to_currency_line(Currency currency,
-                                                std::string sep = "#//#") {
+    static std::string convert_to_currency_line(
+        Currency currency, std::string sep = Config::separator) {
         std::string currency_record = "";
 
         currency_record += currency.getCountry() + sep;
@@ -121,40 +122,62 @@ class Currency {
         return currencies_records;
     }
 
-    static std::vector<Currency> load_currencies_object_data() {
+    static Status<std::vector<Currency>> load_currencies_object_data() {
         std::vector<Currency> currencies;
-        Files currency_file{Config::currencies_file, false};
-        for (std::string& currency_line : currency_file.load_data_list()) {
-            currencies.push_back(convert_to_currency_object(currency_line));
+        Files currency_file{Config::currencies_file};
+        Status<std::vector<std::string>> currency_data =
+            currency_file.load_data_list();
+
+        if (currency_data.issuccessful()) {
+            for (std::string& currency_line : currency_data.response) {
+                currencies.push_back(convert_to_currency_object(currency_line));
+            }
+            return {currencies, StatusCode::None};
         }
-        return currencies;
+        return {{}, currency_data.status_code};
     }
 
     void update() {
-        std::vector<Currency> currencies = load_currencies_object_data();
-        for (Currency& currency : currencies) {
-            if (currency.getCurrencyCode() == getCurrencyCode()) {
-                // currency = *this;
-                // break;
-                currency.rate_ = getRate();
+        Status<std::vector<Currency>> currencies =
+            load_currencies_object_data();
+        if (currencies.issuccessful()) {
+            for (Currency& currency : currencies.response) {
+                if (currency.getCurrencyCode() == getCurrencyCode()) {
+                    // currency = *this;
+                    // break;
+                    currency.rate_ = getRate();
+                }
             }
+            currency_file.update_file(
+                convert_to_currencies_line(currencies.response));
         }
-        currency_file.update_file(convert_to_currencies_line(currencies));
     }
 
-    static Currency find(std::string target, FindBy by) {
+    static Status<Currency> find(std::string target, FindBy by) {
         target = String::upper(target);
-        Files currency_file{Config::currencies_file, false};
-        for (std::string& currency_line : currency_file.load_data_list()) {
-            std::string container =
-                String::split(currency_line, "#//#").at((short)by);
-            container = String::upper(container);
+        Files currency_file{Config::currencies_file};
+        Status<std::vector<std::string>> currency_data =
+            currency_file.load_data_list();
 
-            if (target == container) {
-                return convert_to_currency_object(currency_line);
+        if (currency_data.issuccessful()) {
+            for (std::string& currency_line : currency_data.response) {
+                std::string container =
+                    String::split(currency_line, Config::separator)
+                        .at((short)by);
+
+                container = String::upper(container);
+
+                if (target == container) {
+                    return {convert_to_currency_object(currency_line),
+                            StatusCode::None};
+                }
             }
-        }
-        return get_empty_object();
+        } else
+            return {get_empty_object(), currency_data.status_code};
+
+        return {get_empty_object(),
+                (by == FindBy::CurrencyCode ? StatusCode::CurrencyCodeInvalid
+                                            : StatusCode::CountryInvalid)};
     }
 };
 

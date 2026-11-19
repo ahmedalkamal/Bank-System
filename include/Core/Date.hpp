@@ -347,8 +347,8 @@ class Date  // date management
     // ==================== System Date ====================
 
     static std::string get_time_string() {
-        time_t current_time = time(0);
-        tm* now = localtime(&current_time);
+        std::time_t current_time = std::time(nullptr);
+        std::tm* now = std::localtime(&current_time);
 
         short day, month, year, hour, minute, second;
 
@@ -363,16 +363,31 @@ class Date  // date management
                std::to_string(day) + " - " + std::to_string(hour) + ":" +
                std::to_string(minute) + ":" + std::to_string(second);
     }
+
+    static std::string get_system_time() {
+        std::time_t current_time = std::time(nullptr);
+        std::tm* now = std::localtime(&current_time);
+
+        short hour, minute, second;
+
+        hour = now->tm_hour;
+        minute = now->tm_min;
+        second = now->tm_sec;
+
+        return std::to_string(hour) + ":" + std::to_string(minute) + ":" +
+               std::to_string(second);
+    }
+
     static DateInfo get_system_date() {
-        time_t current_time = time(0);
-        tm* time_now = localtime(&current_time);
+        std::time_t current_time = std::time(nullptr);
+        std::tm* time_now = std::localtime(&current_time);
         return DateInfo{short(time_now->tm_year + 1900),
                         short(time_now->tm_mon + 1), short(time_now->tm_mday)};
     }
 
     // DateInfo get_system_date() {
-    //     time_t current_time = time(0);
-    //     tm* time_now = localtime(&current_time);
+    //     std::time_t current_time = std::time(nullptr);
+    //     std::stm* time_now = std::localtime(&current_time);
     //     return DateInfo{short(time_now->tm_year + 1900),
     //                     short(time_now->tm_mon + 1),
     //                     short(time_now->tm_mday)};

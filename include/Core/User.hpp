@@ -3,10 +3,12 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "../Global/Config.hpp"
+#include "../Global/ResultStatus.hpp"
 #include "../Utils/InputValidate.hpp"
 #include "../Utils/String.hpp"
 #include "../Utils/Util.hpp"
@@ -18,10 +20,11 @@
 class User : public Person {
    private:
     enum class ObjectMode { Empty, Update, AddNew };
+    static std::map<std::string, std::string> UsersMap;
 
    public:
     enum class Permissions {
-        // Admin = -2,
+        Admin = -2,
         FullAccess = -1,
         ListClients = 1,
         AddNewClient = 2,
@@ -92,6 +95,8 @@ class User : public Person {
     std::string getUserName() { return this->username_; }
     std::string getPassword() { return this->password_; }
     short getPermissions() { return this->permissions_; }
+    bool is_deleted() { return this->was_deleted; }
+    bool is_admin() { return getPermissions() == (short)Permissions::Admin; }
     // Date::DateInfo getLoginDate() { return this->login_date_; }
 
     // properties get and set
@@ -120,64 +125,82 @@ class User : public Person {
         };
     }
 
-    static std::vector<LoginRecord> get_login_records() {
+    static Status<std::vector<LoginRecord>> get_login_records() {
         std::vector<LoginRecord> record;
         Files login_record_file{Config::login_log_file};
-        for (std::string& dataline : login_record_file.load_data_list()) {
-            record.push_back(convert_to_struct(dataline));
+        Status<std::vector<std::string>> login_logs =
+            login_record_file.load_data_list();
+
+        if (login_logs.issuccessful()) {
+            for (std::string& dataline : login_logs.response) {
+                record.push_back(convert_to_struct(dataline));
+            }
+            return {record, StatusCode::None};
         }
-        return record;
+        return {{}, login_logs.status_code};
     }
-    static std::vector<User> get_users_list() {
+    static Status<std::vector<User>> get_users_list() {
         std::vector<User> objects;
-        Files users_file{Config::users_file};
-        for (std::string& dataline : users_file.load_data_list()) {
-            objects.push_back(convert_to_object(dataline));
+
+        for (const auto& pair : UsersMap) {
+            objects.push_back(convert_to_object(pair.second));
         }
-        return objects;
+        return {objects, StatusCode::None};
+
+        // Files users_file{Config::users_file};
+        // Status<std::vector<std::string>> users_date =
+        //     users_file.load_data_list();
+
+        // if (users_date.issuccessful()) {
+        //     for (std::string& dataline : users_date.response) {
+        //         objects.push_back(convert_to_object(dataline));
+        //     }
+        //     return {objects, users_date.status_code};
+        // }
+        // return {{}, users_date.status_code};
     }
 
-    static User find(std::string username) {
-        std::fstream file;
+    static Status<User> find(std::string username) {
+        auto user = UsersMap.find(username);
 
-        file.open(Config::users_file, std::ios::in);
-        if (file.is_open()) {
-            std::string object_line;
-            while (getline(file, object_line)) {
-                User user = convert_to_object(object_line);
-                if (user.getUserName() == username) {
-                    file.close();
-                    return user;
+        if (user != UsersMap.end()) {
+            return {convert_to_object(UsersMap.at(username)), StatusCode::None};
+        } else {
+            return {get_empty_object(), StatusCode::UserNotFound};
+        }
+    }
+
+    static Status<User> find(std::string username, std::string password) {
+        Status<User> object = User::find(username);
+        if (object.issuccessful()) {
+            if (object.response.getUserName() == username) {
+                if (object.response.getPassword() == password) {
+                    return object;
                 }
             }
-            file.close();
+        } else {
+            return {object.response, StatusCode::InvalidUsername};
         }
-        return get_empty_object();
-    }
-    static User find(std::string username, std::string password) {
-        User object = User::find(username);
-        if (object.getUserName() == username) {
-            if (object.getPassword() == password) {
-                return object;
-            }
-        }
-        return get_empty_object();
+        return {get_empty_object(), StatusCode::InvalidPassword};
     }
 
     static bool is_user_exist(std::string username) {
-        // User object = User::find(username);
-        // return !object.is_empty();
-        return !User::find(username).is_empty();
+        User object = User::find(username).response;
+        return !object.is_empty();
     }
 
-    bool check_access_permission(Permissions permission) {
-        if (permission == Permissions::FullAccess) {
-            return true;
-        } else if (Permissions(this->getPermissions() & (short)permission) ==
-                   permission) {
-            return true;
+    Status<bool> check_access_permission(Permissions permission) {
+        if (this->getPermissions() == (short)Permissions::Admin) {
+            return {true, StatusCode::None};
+        }
+        if (this->getPermissions() == (short)Permissions::FullAccess) {
+            return {true, StatusCode::None};
+        }
+        if (Permissions(this->getPermissions() & (short)permission) ==
+            permission) {
+            return {true, StatusCode::None};
         } else {
-            return false;
+            return {false, StatusCode::AccessDenied};
         }
     }
     bool is_empty() const { return this->mode_ == ObjectMode::Empty; }
@@ -209,19 +232,23 @@ class User : public Person {
         }
         return SaveStatus::UnknownFalied;
     }
-    bool remove() {
-        std::vector<User> objects = get_users_list();
-        for (User& client : objects) {
-            if (client.getUserName() == this->getUserName()) {
-                client.marked_for_delete_ = true;
-                break;
-            }
-        }
+    Status<bool> remove() {
+        auto user = UsersMap.find(getUserName());
 
-        remove_marked(objects);
-        users_file.update_file(convert_to_datalines(objects));
-        *this = get_empty_object();
-        return true;
+        if (user != UsersMap.end()) {
+            User user = convert_to_object(UsersMap.at(getUserName()));
+            if (user.getPermissions() == (short)Permissions::Admin) {
+                return {false, StatusCode::UserDeletionFailed};
+            }
+            UsersMap.erase(getUserName());
+            users_file.update_file(get_users_dataline());
+            *this = get_empty_object();
+            this->was_deleted = true;
+            return {true, StatusCode::None};
+
+        } else {
+            return {false, StatusCode::UserNotFound};
+        }
     }
 
    private:
@@ -232,9 +259,9 @@ class User : public Person {
     std::string username_;
     std::string password_;
     short permissions_;
-    // Date::DateInfo login_date_;
 
-    bool marked_for_delete_ = false;
+    bool was_deleted = false;
+    // Date::DateInfo login_date_;
 
     static User get_empty_object() {
         return {
@@ -243,7 +270,8 @@ class User : public Person {
         };
     }
 
-    static User convert_to_object(std::string line, std::string sep = "#//#") {
+    static User convert_to_object(std::string line,
+                                  std::string sep = Config::separator) {
         std::vector<std::string> client_info = String::split(line, sep);
 
         return User{
@@ -271,8 +299,8 @@ class User : public Person {
             std::to_string(object.getPermissions()),
         };
     }
-    static std::string convert_to_dataline(User object,
-                                           std::string sep = "#//#") {
+    static std::string convert_to_dataline(
+        User object, std::string sep = Config::separator) {
         if (object.is_empty()) {
             return "";
         }
@@ -280,7 +308,7 @@ class User : public Person {
     }
 
     static LoginRecord convert_to_struct(std::string record,
-                                         std::string sep = "#//#") {
+                                         std::string sep = Config::separator) {
         std::vector<std::string> record_info = String::split(record, sep);
 
         return {
@@ -290,7 +318,7 @@ class User : public Person {
             record_info.at(3),  // permissions
         };
     }
-    std::string get_login_record(std::string sep = "#//#") {
+    std::string get_login_record(std::string sep = Config::separator) {
         std::vector<std::string> record = convert_to_vector(*this);
         std::vector<std::string>::iterator iter = record.begin();
         record.erase(iter, iter + 4);
@@ -299,35 +327,51 @@ class User : public Person {
         return String::join(record, sep);
     }
 
-    static std::vector<std::string> convert_to_datalines(
-        std::vector<User>& objects) {
+    static std::vector<std::string> get_users_dataline() {
         std::vector<std::string> datalines;
-        for (User& user : objects) {
-            datalines.push_back(convert_to_dataline(user));
+        for (const auto& pair : UsersMap) {
+            datalines.push_back(pair.second);
         }
         return datalines;
     }
 
     void update() {
-        std::vector<std::string> date = users_file.load_data_list();
-        for (std::string& item : date) {
-            User user = convert_to_object(item);
-            if (user.getUserName() == this->getUserName()) {
-                item = convert_to_dataline(*this);
-                break;
-            }
+        // std::map<std::string, std::string> UsersMap = load_users_map();
+
+        if (UsersMap.find(getUserName()) != UsersMap.end()) {
+            UsersMap.at(getUserName()) = convert_to_dataline(*this);
+            users_file.update_file(get_users_dataline());
         }
-        users_file.update_file(date);
     }
-    void add_new() { users_file.append_to_file(convert_to_dataline(*this)); }
-    void remove_marked(std::vector<User>& objects) {
-        std::vector<User>::iterator iter = objects.begin();
-        for (int index = 0; index < objects.size(); index++) {
-            if (objects.at(index).marked_for_delete_) {
-                objects.erase(iter + index);
+    void add_new() {
+        std::string line = convert_to_dataline(*this);
+        users_file.append_to_file(line);
+        UsersMap.insert({getUserName(), line});
+    }
+
+    static std::string _get_username_for_map(std::string line) {
+        return convert_to_object(line).getUserName();
+    }
+
+    static std::map<std::string, std::string> load_users_map() {
+        std::map<std::string, std::string> users;
+        std::fstream file;
+
+        file.open(Config::users_file, std::ios::in);
+        if (file.is_open()) {
+            std::string object_line;
+            while (getline(file, object_line)) {
+                std::string username = _get_username_for_map(object_line);
+                // std::cout << username;
+                users.insert({username, object_line});
             }
+            file.close();
+            return users;
         }
+        return {{}};
     }
 };
+
+std::map<std::string, std::string> User::UsersMap = User::load_users_map();
 
 #endif  // CLASS_USER_HPP

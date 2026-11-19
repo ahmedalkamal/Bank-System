@@ -6,7 +6,9 @@
 
 #include "../../Core/User.hpp"
 #include "../../Global/Config.hpp"
+#include "../../Utils/Color.hpp"
 #include "../../Utils/InputValidate.hpp"
+#include "../../Utils/Table.hpp"
 #include "../../Utils/Util.hpp"
 #include "../ClientScreens/AddNewClientScreen.hpp"
 #include "../ClientScreens/ClientsListScreen.hpp"
@@ -37,38 +39,35 @@ class MainScreen : protected Screen {
    public:
     static void show_main_menu() {
         system(Config::clear.c_str());
-        draw_screen_header("console application", "", 39);
+        draw_screen_header("console application");
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(57) << std::left << "" << "\tMain Menu\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[1] Show Clients List.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[2] Add New Client.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[3] Delete Client.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[4] Update Client Info.\n";
-        std::cout << std::setw(37) << std::left << "" << "\t[5] Find Client.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[6] Transactions.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[7] Manage Users.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[8] Login Records.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[9] Currency Exchange.\n";
-        std::cout << std::setw(37) << std::left << "" << "\t[10] Logout.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
+        std::vector<std::string> menus{
+            "Show Clients List.", "Add New Client.",
+            "Delete Client.",     "Update Client.",
+            "Find Client.",       "Transacions.",
+            "Manage Users.",      "Login Records.",
+            "Currency Exchange.", "Logout.",
+        };
 
-        perfrom_main_menu_option((MainMenuOptions)read_main_menu_option());
+        Table table{"Main Menu"};
+        table.add_column("No.", 4, Table::Align::Center);
+        table.add_column(" Options", 64, Table::Align::Center);
+
+        table.setAlignment(25);
+        for (short i = 0, p = 1; i < menus.size(); i++, p *= 2) {
+            std::string num = String::zfill(std::to_string(i + 1), 2);
+            if (i < menus.size() - 1) {
+                num = (CurrentUser.check_access_permission((User::Permissions)p)
+                               .issuccessful()
+                           ? Color::bright_green(num)
+                           : Color::bright_red(num));
+            }
+            table.add_row({num, menus[i]});
+        }
+        table.print_menu();
+
+        perfrom_main_menu_option(
+            (MainMenuOptions)read_main_menu_option(menus.size()));
     }
 
    private:
@@ -76,27 +75,31 @@ class MainScreen : protected Screen {
         // if (std::cin.fail() || std::cin.peek() != '\n') {
         Util::clear_buffer();
         // }
-        std::cout << "Press enter to go back to Main Menu...";
+        std::cout << "\n> Press enter to go back to Main Menu...";
         std::cin.get();
         show_main_menu();
     }
 
-    static short read_main_menu_option() {
+    static short read_main_menu_option(short max) {
         bool valid = false;
         short choice;
         std::cout << std::setw(37) << std::left << ""
-                  << "Choose what do you want to do [1 - 10]: ";
+                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
         while (!valid) {
             std::cin >> choice;
             valid = InputValidate::is_valid();
             if (!valid) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Invalid Input, Enter again [1 - 10]: ";
+                          << Color::yellow("[!] Invalid Input") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 continue;
             }
-            if (!InputValidate::in_range<short>(choice, 1, 10)) {
+            if (!InputValidate::in_range<short>(choice, 1, max)) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Input Out Of Range, Enter again [1 - 10]: ";
+                          << Color::yellow("[!] Input Out Of Range") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 valid = false;
             }
         }
@@ -140,7 +143,7 @@ class MainScreen : protected Screen {
     static void show_end_screen() {
         std::cout << "\nEnd Screen Will be here...\n";
     }
-    static void logout() { CurrentUser = User::find("", ""); }
+    static void logout() { CurrentUser = User::find("", "").response; }
 
     static void perfrom_main_menu_option(MainMenuOptions option) {
         system(Config::clear.c_str());
@@ -167,16 +170,24 @@ class MainScreen : protected Screen {
                 break;
             case MainMenuOptions::TransactionsMenu:
                 show_transactions_menu();
-                if (!CurrentUser.check_access_permission(
-                        User::Permissions::Transacions))
+                if (!CurrentUser
+                         .check_access_permission(
+                             User::Permissions::Transacions)
+                         .issuccessful())
                     back_to_main_menu();
                 else
                     show_main_menu();
                 break;
             case MainMenuOptions::ManageUsers:
                 show_manage_users_menu();
-                if (!CurrentUser.check_access_permission(
-                        User::Permissions::ManageUsers))
+                if (CurrentUser.is_deleted()) {
+                    logout();
+                    break;
+                }
+                if (!CurrentUser
+                         .check_access_permission(
+                             User::Permissions::ManageUsers)
+                         .issuccessful())
                     back_to_main_menu();
                 else
                     show_main_menu();
@@ -187,8 +198,10 @@ class MainScreen : protected Screen {
                 break;
             case MainMenuOptions::CurrecnyExchange:
                 show_currency_exchange_screen();
-                if (!CurrentUser.check_access_permission(
-                        User::Permissions::CurrencyExchange))
+                if (!CurrentUser
+                         .check_access_permission(
+                             User::Permissions::CurrencyExchange)
+                         .issuccessful())
                     back_to_main_menu();
                 else
                     show_main_menu();

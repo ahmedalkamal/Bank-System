@@ -3,10 +3,12 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "../Global/Config.hpp"
+#include "../Global/ResultStatus.hpp"
 #include "../Utils/InputValidate.hpp"
 #include "../Utils/String.hpp"
 #include "Date.hpp"
@@ -17,6 +19,7 @@
 class BankClient : public Person {
    private:
     enum ObjectMode { Empty = 0, Update = 1, AddNew = 2 };
+    static std::map<std::string, std::string> ClientsMap;
 
    public:
     enum SaveStatus {
@@ -39,9 +42,8 @@ class BankClient : public Person {
     BankClient(const ObjectMode mode, const std::string& first_name,
                const std::string& last_name, const std::string& email,
                const std::string& phone, const std::string& account_number,
-               const std::string& pin_code, const float& balance,
-               bool traffic = false)
-        : Person(first_name, last_name, email, phone, traffic),
+               const std::string& pin_code, const float& balance)
+        : Person(first_name, last_name, email, phone),
           clients_file(Config::clients_file, false),
           transfer_log_file(Config::transfer_log_file, false) {
         this->mode_ = mode;
@@ -53,62 +55,25 @@ class BankClient : public Person {
     // setter functions
     void setPinCode(std::string value) {
         if (value.empty()) {
-            if (this->getTraffic()) {
-                std::cout << "[WARNING]: Attempted to set empty value for "
-                             "pin code, Ignored."
-                          << std::endl;
-            }
             return;
         }
         if (this->pin_code_ != value) {
             this->pin_code_ = value;
-            if (this->getTraffic()) {
-                std::cout << "[INFO SET]: Pin code update to: "
-                          << this->pin_code_ << std::endl;
-            }
         }
     }
     void setBalance(float value) {
         if (value < 0) {
-            if (this->getTraffic()) {
-                std::cout << "[WARNING]: Attempted to set negative value for "
-                             "balance, Ignored."
-                          << std::endl;
-            }
             return;
         }
         if (this->balance_ != value) {
             this->balance_ = value;
-            if (this->getTraffic()) {
-                std::cout << "[INFO SET]: Balance update to: " << this->balance_
-                          << std::endl;
-            }
         }
     }
 
     // getter functions
-    std::string getAccountNumber() {
-        if (this->getTraffic()) {
-            std::cout
-                << "[INFO GET] getAccountNumber accessed, returned value: "
-                << this->account_number_ << std::endl;
-        }
-        return this->account_number_;
-    }
-    std::string getPinCode() {
-        if (this->getTraffic()) {
-            std::cout << "[INFO GET] getPinCode accessed, returned value: "
-                      << this->pin_code_ << std::endl;
-        }
-        return this->pin_code_;
-    }
-    float getBalance() {
-        if (this->getTraffic()) {
-            std::cout << "[INFO GET] getBalance accessed, returned value: "
-                      << this->balance_ << std::endl;
-        }
-        return this->balance_;
-    }
+    std::string getAccountNumber() { return this->account_number_; }
+    std::string getPinCode() { return this->pin_code_; }
+    float getBalance() { return this->balance_; }
     static BankClient get_addnew_object(std::string account_number) {
         return {
             BankClient::ObjectMode::AddNew,  // mode
@@ -119,7 +84,6 @@ class BankClient : public Person {
             account_number,                  // account number
             "",                              // pin code
             .0f,                             // balance
-            false,                           // traffic
         };
     }
 
@@ -134,62 +98,80 @@ class BankClient : public Person {
 
     // functions
 
-    static std::vector<BankClient> get_clients_list() {
+    static Status<std::vector<BankClient>> get_clients_list() {
         std::vector<BankClient> objects;
-        Files clients_file{Config::clients_file};
-        for (std::string& dataline : clients_file.load_data_list()) {
-            objects.push_back(convert_to_object(dataline));
+
+        for (const auto& pair : ClientsMap) {
+            objects.push_back(convert_to_object(pair.second));
         }
-        return objects;
+        return {objects, StatusCode::None};
+
+        // std::vector<BankClient> objects;
+        // Files clients_file{Config::clients_file};
+        // Status<std::vector<std::string>> clients =
+        //     clients_file.load_data_list();
+
+        // if (clients.issuccessful()) {
+        //     for (std::string& dataline : clients.response) {
+        //         objects.push_back(convert_to_object(dataline));
+        //     }
+        //     return {objects, StatusCode::None};
+        // }
+        // return {{}, clients.status_code};
     }
 
-    static std::vector<TransferLog> get_transfer_logs() {
+    static Status<std::vector<TransferLog>> get_transfer_logs() {
         std::vector<TransferLog> logs;
-        Files transfer_log_file{"transfer-logs.txt", false};
-        for (std::string& dataline : transfer_log_file.load_data_list()) {
-            logs.push_back(convert_to_struct(dataline));
-        }
-        return logs;
-    }
+        Files transfer_log_file{Config::transfer_log_file};
+        Status<std::vector<std::string>> transfer_logs =
+            transfer_log_file.load_data_list();
 
-    static double get_total_balances() {
-        std::vector<BankClient> clients = get_clients_list();
-        double total_balance = 0;
-        for (BankClient& client : clients) {
-            total_balance += client.getBalance();
-        }
-        return total_balance;
-    }
-    static BankClient find(std::string account_number) {
-        std::fstream file;
-
-        file.open(Config::clients_file, std::ios::in);
-        if (file.is_open()) {
-            std::string object_line;
-            while (getline(file, object_line)) {
-                BankClient client = convert_to_object(object_line);
-                if (client.getAccountNumber() == account_number) {
-                    file.close();
-                    return client;
-                }
+        if (transfer_logs.issuccessful()) {
+            for (std::string& dataline : transfer_logs.response) {
+                logs.push_back(convert_to_struct(dataline));
             }
-            file.close();
+            return {logs, StatusCode::None};
         }
-        return get_empty_object();
+        return {{}, transfer_logs.status_code};
     }
-    static BankClient find(std::string account_number, std::string pin_code) {
-        BankClient object = BankClient::find(account_number);
-        if (object.getAccountNumber() == account_number) {
-            if (object.getPinCode() == pin_code) {
+
+    static Status<double> get_total_balances() {
+        Status<std::vector<BankClient>> clients = get_clients_list();
+        double total_balance = 0;
+        if (clients.issuccessful()) {
+            for (BankClient& client : clients.response) {
+                total_balance += client.getBalance();
+            }
+            return {total_balance, StatusCode::None};
+        }
+        return {0, clients.status_code};
+    }
+
+    static Status<BankClient> find(std::string account_number) {
+        auto user = ClientsMap.find(account_number);
+
+        if (user != ClientsMap.end()) {
+            return {convert_to_object(ClientsMap.at(account_number)),
+                    StatusCode::None};
+        } else {
+            return {get_empty_object(), StatusCode::ClientNotFound};
+        }
+    }
+
+    static Status<BankClient> find(std::string account_number,
+                                   std::string pin_code) {
+        Status<BankClient> object = BankClient::find(account_number);
+        if (object.response.getAccountNumber() == account_number) {
+            if (object.response.getPinCode() == pin_code) {
                 return object;
             }
         }
-        return get_empty_object();
+        return {get_empty_object(), object.status_code};
     }
 
     static bool is_client_exist(std::string account_number) {
-        BankClient object = BankClient::find(account_number);
-        return !object.is_empty();
+        Status<BankClient> object = BankClient::find(account_number);
+        return !object.response.is_empty();
     }
 
     bool is_empty() const { return this->mode_ == ObjectMode::Empty; }
@@ -222,48 +204,66 @@ class BankClient : public Person {
         }
         return SaveStatus::UnknownFalied;
     }
-    bool remove() {
-        std::vector<BankClient> objects = get_clients_list();
-        for (BankClient& client : objects) {
-            if (client.getAccountNumber() == this->getAccountNumber()) {
-                client.marked_for_delete_ = true;
-                break;
-            }
-        }
 
-        remove_marked(objects);
-        clients_file.update_file(convert_to_datalines(objects));
-        *this = get_empty_object();
-        return true;
+    Status<bool> remove() {
+        auto client = ClientsMap.find(getAccountNumber());
+
+        if (client != ClientsMap.end()) {
+            BankClient client =
+                convert_to_object(ClientsMap.at(getAccountNumber()));
+
+            ClientsMap.erase(getAccountNumber());
+            clients_file.update_file(get_clients_dataline());
+            *this = get_empty_object();
+            return {true, StatusCode::None};
+
+        } else {
+            return {false, StatusCode::ClientNotFound};
+        }
     }
 
-    bool deposit(float amount) {
+    Status<bool> deposit(float amount) {
+        // if ()
         if (amount > 0) {
             balance_ += amount;
             save();
-            return true;
+            return {true, StatusCode::None};
         }
-        return false;
+        return {false, StatusCode::DepositFailed};
     }
-    bool withdraw(float amount) {
+    Status<bool> withdraw(float amount) {
         if (InputValidate::in_range<float>(amount, .0f, balance_)) {
             balance_ -= amount;
             save();
-            return true;
+            return {true, StatusCode::None};
         }
-        return false;
+        return {false, StatusCode::InsufficientBalance};
     }
-    bool transfer(float amount, BankClient& recipient, std::string username) {
-        if (withdraw(amount)) {
-            if (recipient.deposit(amount)) {
+
+    Status<bool> transfer(float amount, BankClient& recipient,
+                          std::string username) {
+        if (getAccountNumber() == recipient.getAccountNumber()) {
+            return {false, StatusCode::TransferFailed};
+        }
+
+        Status<bool> status = withdraw(amount);
+        if (status.issuccessful()) {
+            status = recipient.deposit(amount);
+            if (status.issuccessful()) {
                 save_transfer_log(amount, recipient, username);
-                return true;
+                return {true, status.status_code};
+            } else {
+                status = deposit(amount);
+                return {false, StatusCode::TransferFailed};
             }
         }
-        return false;
+        return {false, status.status_code};
     }
 
    private:
+    // std::map<std::string, BankClient(get_empty_object())> clients_data;
+    // clients_data;
+
     Files clients_file;
     Files transfer_log_file;
     ObjectMode mode_;
@@ -271,34 +271,24 @@ class BankClient : public Person {
     std::string account_number_;
     std::string pin_code_;
     float balance_;
-    bool marked_for_delete_ = false;
+    // bool marked_for_delete_ = false;
 
     void setAccountNumber(std::string value) {
         if (value.empty()) {
-            if (this->getTraffic()) {
-                std::cout << "[WARNING]: Attempted to set empty value for "
-                             "account number, Ignored."
-                          << std::endl;
-            }
             return;
         }
         if (this->account_number_ != value) {
             this->account_number_ = value;
-            if (this->getTraffic()) {
-                std::cout << "[INFO SET]: Account number update to: "
-                          << this->account_number_ << std::endl;
-            }
         }
     }
     static BankClient get_empty_object() {
         return {
             BankClient::ObjectMode::Empty, "", "", "", "", "", "", .0f,
-            // false,
         };
     }
 
     static BankClient convert_to_object(std::string line,
-                                        std::string sep = "#//#") {
+                                        std::string sep = Config::separator) {
         std::vector<std::string> client_info = String::split(line, sep);
 
         return BankClient{
@@ -310,7 +300,6 @@ class BankClient : public Person {
             client_info.at(4),               // account number
             client_info.at(5),               // pin code
             std::stof(client_info.at(6)),    // balance
-            // false,                           // traffic
         };
     }
     static std::vector<std::string> convert_to_vector(BankClient object) {
@@ -331,19 +320,11 @@ class BankClient : public Person {
         if (object.is_empty()) {
             return "";
         }
-        return String::join(convert_to_vector(object), "#//#");
-    }
-    static std::vector<std::string> convert_to_datalines(
-        std::vector<BankClient>& objects) {
-        std::vector<std::string> datalines;
-        for (BankClient& client : objects) {
-            datalines.push_back(convert_to_dataline(client));
-        }
-        return datalines;
+        return String::join(convert_to_vector(object), Config::separator);
     }
 
     static TransferLog convert_to_struct(std::string line,
-                                         std::string sep = "#//#") {
+                                         std::string sep = Config::separator) {
         std::vector<std::string> log = String::split(line, sep);
         return {
             log.at(0),
@@ -355,43 +336,68 @@ class BankClient : public Person {
             log.at(6),
         };
     }
-    std::string get_transfer_log(float amount, const BankClient& recipient,
+    std::string get_transfer_log(float amount, BankClient recipient,
                                  std::string username,
-                                 std::string sep = "#//#") {
+                                 std::string sep = Config::separator) {
         std::vector<std::string> record;  // = convert_to_vector(*this);
         // std::vector<std::string>::iterator iter = record.begin();
         // record.erase(iter, iter + 4);
         record.push_back(Date::get_time_string());
-        record.push_back(account_number);
-        record.push_back(recipient.account_number);
+        record.push_back(getAccountNumber());
+        record.push_back(recipient.getAccountNumber());
         record.push_back(std::to_string(amount));
-        record.push_back(std::to_string(balance));
-        record.push_back(std::to_string(recipient.balance));
+        record.push_back(std::to_string(getBalance()));
+        record.push_back(std::to_string(recipient.getBalance()));
         record.push_back(username);
 
         return String::join(record, sep);
     }
 
-    void update() {
-        std::vector<std::string> date = clients_file.load_data_list();
-        for (std::string& item : date) {
-            BankClient client = convert_to_object(item);
-            if (client.getAccountNumber() == this->getAccountNumber()) {
-                item = convert_to_dataline(*this);
-                break;
-            }
+    static std::vector<std::string> get_clients_dataline() {
+        std::vector<std::string> datalines;
+        for (const auto& pair : ClientsMap) {
+            datalines.push_back(pair.second);
         }
-        clients_file.update_file(date);
+        return datalines;
     }
-    void add_new() { clients_file.append_to_file(convert_to_dataline(*this)); }
-    void remove_marked(std::vector<BankClient>& objects) {
-        std::vector<BankClient>::iterator iter = objects.begin();
-        for (int index = 0; index < objects.size(); index++) {
-            if (objects.at(index).marked_for_delete_) {
-                objects.erase(iter + index);
-            }
+
+    void update() {
+        if (ClientsMap.find(getAccountNumber()) != ClientsMap.end()) {
+            ClientsMap.at(getAccountNumber()) = convert_to_dataline(*this);
+            clients_file.update_file(get_clients_dataline());
         }
+    }
+
+    void add_new() {
+        std::string line = convert_to_dataline(*this);
+        clients_file.append_to_file(line);
+        ClientsMap.insert({getAccountNumber(), line});
+    }
+
+    static std::string _get_account_number_for_map(std::string line) {
+        return convert_to_object(line).getAccountNumber();
+    }
+
+    static std::map<std::string, std::string> load_clients_map() {
+        std::map<std::string, std::string> clients;
+        std::fstream file;
+
+        file.open(Config::clients_file, std::ios::in);
+        if (file.is_open()) {
+            std::string object_line;
+            while (getline(file, object_line)) {
+                std::string username = _get_account_number_for_map(object_line);
+                // std::cout << username;
+                clients.insert({username, object_line});
+            }
+            file.close();
+            return clients;
+        }
+        return {{}};
     }
 };
+
+std::map<std::string, std::string> BankClient::ClientsMap =
+    BankClient::load_clients_map();
 
 #endif  // CLASS_BANK_CLIENT_HPP

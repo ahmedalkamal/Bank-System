@@ -1,3 +1,7 @@
+/*
+ this class `property` was made by ai it's not good btw
+*/
+
 #ifndef CLASS_PROPERTY_HPP
 #define CLASS_PROPERTY_HPP
 

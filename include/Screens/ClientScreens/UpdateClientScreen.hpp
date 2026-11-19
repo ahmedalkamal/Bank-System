@@ -13,72 +13,107 @@
 class UpdateClientScreen : protected Screen {
    public:
     static void show_update_client_screen() {
+        draw_screen_header("Update Client Screen");
         if (!has_permission(User::Permissions::UpdateClients)) {
             return;
         }
-        draw_screen_header("Update Client Screen");
+
         std::string account_number = "";
-        std::cout << "\nPlease Enter Account Number: ";
+
+        std::cout << std::setw(30) << std::left << "";
+        std::cout << "[+] Please Enter Account Number: ";
         account_number = InputValidate::read_template<std::string>();
         while (!BankClient::is_client_exist(account_number)) {
-            std::cout << "\nAccount Number is not found, choose another one: ";
-            account_number = InputValidate::read_template<std::string>();
+            std::cout << "\n" << std::setw(30) << std::left << "";
+            account_number = InputValidate::read_template<std::string>(
+                "[+] " + Color::bright_yellow("Account Number is not found") +
+                ", choose another one: ");
         }
-        BankClient client = BankClient::find(account_number);
+        BankClient client = BankClient::find(account_number).response;
         print_client_card(client);
 
         char answer = 'n';
-        std::cout << "\nAre you sure you want to update this client Y/N : ";
+        std::cout << "\n" << std::setw(30) << std::left << "";
+        std::cout << "[+] Are you sure you want to update this client Y/N : ";
         std::cin >> answer;
+        read_client_info(client);
 
         if (std::tolower(answer) == 'y') {
-            std::cout << "\nUpdate Clinet Info: ";
-            std::cout << "\n-------------------------------------\n";
-            read_client_info(client);
-
             switch (client.save()) {
                 case BankClient::SaveStatus::Successful:
-                    std::cout << "\nAccount Added Successfully ;)\n";
+                    std::cout << "\n" << std::setw(30) << std::left << "";
+                    std::cout
+                        << "[#] " + Color::bright_green(
+                                        "Account Updated Successfully.\n");
                     print_client_card(client);
                     break;
                 case BankClient::SaveStatus::FailedEmpty:
-                    std::cout
-                        << "\nError account was not saved because it's empty!";
+                    std::cout << "\n" << std::setw(30) << std::left << "";
+                    std::cout << "[!] " + Color::bright_red(
+                                              "Error account was not updated "
+                                              "because it's empty!");
                     break;
             }
         }
     }
 
    private:
+    static float read_balance() {
+        std::cout << std::setw(30) << std::left << "";
+        float balance = InputValidate::input<float>(
+            "[+] Please Enter Balance: ",
+            Color::bright_red(std::string(30, ' ') +
+                              "[+] Please Enter Balance: "));
+        if (balance < 0) {
+            return 0;
+        }
+        return balance;
+    }
+
     static void read_client_info(BankClient& client) {
-        std::cout << "\nEnter Firs Name: ";
-        client.first_name = InputValidate::read_template<std::string>();
-        std::cout << "\nEnter Last Name: ";
-        client.last_name = InputValidate::read_template<std::string>();
-        std::cout << "\nEnter Email: ";
-        client.email = InputValidate::read_template<std::string>();
-        std::cout << "\nEnter Phone: ";
-        client.phone = InputValidate::read_template<std::string>();
-        std::cout << "\nEnter Pin Code: ";
-        client.pin_code = InputValidate::read_template<std::string>();
-        // std::cout << "\nEnter Balance: ";
-        client.balance = InputValidate::input<float>("\nEnter Balance: ",
-                                                     "Invalid Enter again : ");
+        std::cout << std::setw(30) << std::left << "";
+        client.setFirstName(InputValidate::read_template<std::string>(
+            "[+] Please Enter Firs Name: "));
+
+        std::cout << std::setw(30) << std::left << "";
+        client.setLastName(InputValidate::read_template<std::string>(
+            "[+] Please Enter Last Name: "));
+
+        std::cout << std::setw(30) << std::left << "";
+        client.setEmail(InputValidate::read_template<std::string>(
+            "[+] Please Enter Email: "));
+
+        std::cout << std::setw(30) << std::left << "";
+        client.setPhone(InputValidate::read_template<std::string>(
+            "[+] Please Enter Phone: "));
+
+        std::cout << std::setw(30) << std::left << "";
+        client.setPinCode(InputValidate::read_template<std::string>(
+            "[+] Please Enter Pin Code: "));
+
+        // client.balance = read_balance();
     }
 
     static void print_client_card(BankClient client) {
-        std::cout << "Client Card: \n";
-        std::cout << std::string(40, '_') << std::endl;
-        std::cout << "Full Name      : "
-                  << client.getFirstName() + " " + client.getLastName()
-                  << std::endl;
-        std::cout << "Email          : " << client.getEmail() << std::endl;
-        std::cout << "Phone          : " << client.getPhone() << std::endl;
-        std::cout << "Account number : " << client.getAccountNumber()
-                  << std::endl;
-        std::cout << "Pin Code       : " << client.getPinCode() << std::endl;
-        std::cout << "Balance        : " << client.getBalance() << std::endl;
-        std::cout << std::string(40, '_') << std::endl;
+        Table table{"Client Card."};
+        table.add_column("", 16);
+        table.add_column(" info ", 45, Table::Align::Center);
+
+        table.add_row({"Full Name     ", client.getFullName()},
+                      Table::Align::Center);
+        table.add_row({"Email         ", client.getEmail()},
+                      Table::Align::Center);
+        table.add_row({"Phone         ", client.getPhone()},
+                      Table::Align::Center);
+        table.add_row({"Account Number", client.getAccountNumber()},
+                      Table::Align::Center);
+        table.add_row({"Pin Code      ", client.getPinCode()},
+                      Table::Align::Center);
+        table.add_row({"Balance       ", std::to_string(client.getBalance())},
+                      Table::Align::Center);
+
+        table.setAlignment(25);
+        table.print_table();
     }
 };
 

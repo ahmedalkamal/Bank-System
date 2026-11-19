@@ -142,6 +142,13 @@ class Util {
         }
         return result;
     }
+    static std::string generate(std::string character, int length) {
+        std::string result = "";
+        for (; length > 0; length--) {
+            result += character;
+        }
+        return result;
+    }
 
     static std::string generate_key(CharacterType ctype = CharacterType::Random,
                                     char sep = '-') {

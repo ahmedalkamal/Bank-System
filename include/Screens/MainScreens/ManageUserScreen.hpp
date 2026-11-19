@@ -12,6 +12,7 @@
 #include "../UserScreens/AddNewUserScreen.hpp"
 #include "../UserScreens/DeleteUserScreen.hpp"
 #include "../UserScreens/FindUserScreen.hpp"
+#include "../UserScreens/SettingScreen.hpp"
 #include "../UserScreens/UpdateUserScreen.hpp"
 #include "../UserScreens/UsersListScreen.hpp"
 
@@ -23,45 +24,35 @@ class ManageUsersScreen : protected Screen {
         DeleteUser,
         UpdateUser,
         FindUser,
+        Setting,
         MainMenu,
     };
 
    public:
     static void show_manage_users_menu() {
+        system(Config::clear.c_str());
+        draw_screen_header("console application");
         if (!has_permission(User::Permissions::ManageUsers)) {
             return;
         }
 
-        system(Config::clear.c_str());
-        draw_screen_header("console application", "", 39);
+        std::vector<std::string> menus{
+            " List Users.", " Add New User.", " Delete User.", " Update User.",
+            " Find User.",  " Setting.",      " Main Menu.",
+        };
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(57) << std::left << ""
-                  << "Manage Users Menu\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[1] List Users.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[2] Add New User.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[3] Delete User.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[4] Update User.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[5] Find User.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[6] Main Menu.\n";
+        Table table{"Manage Users Menu"};
+        table.add_column("#", 4, Table::Align::Center);
+        table.add_column(" Options", 64, Table::Align::Center);
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
+        table.setAlignment(25);
+        for (short i = 0; i < menus.size(); i++) {
+            table.add_row({std::to_string(i + 1), menus[i]});
+        }
+        table.print_menu();
 
         perform_manage_user_menu_option(
-            (ManageUsersOptions)read_manage_users_menu_option());
+            (ManageUsersOptions)read_manage_users_menu_option(menus.size()));
     }
 
    private:
@@ -69,27 +60,31 @@ class ManageUsersScreen : protected Screen {
         // if (std::cin.fail() || std::cin.peek() != '\n') {
         Util::clear_buffer();
         // }
-        std::cout << "Press enter to go back to Manage Users Menu...";
+        std::cout << "\n\nPress enter to go back to Manage Users Menu...";
         std::cin.get();
         show_manage_users_menu();
     }
 
-    static short read_manage_users_menu_option() {
+    static short read_manage_users_menu_option(short max) {
         bool valid = false;
         short choice;
         std::cout << std::setw(37) << std::left << ""
-                  << "Choose what do you want to do [1 - 6]: ";
+                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
         while (!valid) {
             std::cin >> choice;
             valid = InputValidate::is_valid();
             if (!valid) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Invalid Input, Enter again [1 - 6]: ";
+                          << Color::yellow("[!] Invalid Input") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 continue;
             }
-            if (!InputValidate::in_range<short>(choice, 1, 6)) {
+            if (!InputValidate::in_range<short>(choice, 1, max)) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Input Out Of Range, Enter again [1 - 6]: ";
+                          << Color::yellow("[!] Input Out Of Range") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 valid = false;
             }
         }
@@ -116,6 +111,10 @@ class ManageUsersScreen : protected Screen {
         // std::cout << "\nFine User Screen will be here. \n";
         FindUserScreen::show_find_user_screen();
     }
+    static void show_setting_menu_screen() {
+        // std::cout << "\Setting User Screen will be here. \n";
+        SettingScreen::show_setting_user_menu();
+    }
 
     static void perform_manage_user_menu_option(ManageUsersOptions option) {
         system(Config::clear.c_str());
@@ -140,6 +139,12 @@ class ManageUsersScreen : protected Screen {
             case ManageUsersOptions::FindUser:
                 show_find_user_screen();
                 back_to_manage_users_menu();
+                break;
+            case ManageUsersOptions::Setting:
+                show_setting_menu_screen();
+                if (!CurrentUser.is_deleted()) {
+                    show_manage_users_menu();
+                }
                 break;
             case ManageUsersOptions::MainMenu:
                 /* code */

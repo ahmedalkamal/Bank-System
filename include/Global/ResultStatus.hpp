@@ -8,12 +8,14 @@ enum class StatusCode {
     InvalidInput,
 
     UserNotFound,
-    CanntUpdateUser,
+    UserUpdateFailed,
+    UserDeletionFailed,
 
     InvalidUsername,
     InvalidPassword,
 
     AccessDenied,
+    InsufficienPermission,
     WrongPermission,
 
     ClientNotFound,
@@ -23,6 +25,12 @@ enum class StatusCode {
     InvalidAmount,
     DepositFailed,
     WithdrawFailed,
+    TransferFailed,
+
+    CurrencyNotFound,
+    CurrencyCodeInvalid,
+    CurrencyNameInvalid,
+    CountryInvalid,
 
     FileOpenFailed,
     FileReadFailed,

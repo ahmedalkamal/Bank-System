@@ -21,6 +21,8 @@ class Table {
         this->subtitle = subtitle;
     }
 
+    void setAlignment(short width) { alignment = width; }
+
     void add_to_menu(const std::string& content, short width,
                      Align align = Align::Left) {}
 
@@ -76,16 +78,25 @@ class Table {
     }
 
     void panel(const std::vector<std::string>& main_panel, short width,
-               Align main_align = Align::Left) {
+               Align main_align = Align::Left, bool alignment = false) {
+        if (alignment) {
+            std::cout << Util::generate(' ', this->alignment);
+        }
         std::cout << TOP_LEFT
                   << Util::generate(HORIZONTAL, width) + TOP_RIGHT + NEW_LINE;
 
         for (short index = 0; index < main_panel.size(); index++) {
+            if (alignment) {
+                std::cout << Util::generate(' ', this->alignment);
+            }
             std::cout << VERTICAL
                       << format_text(main_panel[index], width, main_align)
                       << VERTICAL + NEW_LINE;
         }
 
+        if (alignment) {
+            std::cout << Util::generate(' ', this->alignment);
+        }
         std::cout << BOTTOM_LEFT << Util::generate(HORIZONTAL, width)
                   << BOTTOM_RIGHT << std::endl;
     }
@@ -110,12 +121,14 @@ class Table {
                const std::vector<std::string>& right_zone, short width,
                Align align = Align::Left) {
         short left_width = get_sub_width(left_zone);
-        short rigth_width = get_sub_width(right_zone);
+        short right_width = get_sub_width(right_zone);
         short main_width = get_main_width(width, left_width);
-        main_width = get_main_width(main_width, rigth_width);
+        main_width = get_main_width(main_width, right_width);
 
-        if (rigth_width > 0) {
-            std::cout << make_border(TOP_LEFT, TOP_RIGHT, rigth_width);
+        // alignment = (left_width + right_width) / 2;
+
+        if (right_width > 0) {
+            std::cout << make_border(TOP_LEFT, TOP_RIGHT, right_width);
         }
         std::cout << make_border(TOP_LEFT, TOP_RIGHT, main_width);
 
@@ -125,8 +138,8 @@ class Table {
         std::cout << std::endl;
 
         for (short i = 0; i < short(main_panel.size()); i++) {
-            if (rigth_width > 0) {
-                std::cout << make_cell(get_sub_text(right_zone, i), rigth_width,
+            if (right_width > 0) {
+                std::cout << make_cell(get_sub_text(right_zone, i), right_width,
                                        align);
             }
             std::cout << make_cell(main_panel[i], main_width, align);
@@ -137,8 +150,8 @@ class Table {
             std::cout << std::endl;
         }
 
-        if (rigth_width > 0) {
-            std::cout << make_border(BOTTOM_LEFT, BOTTOM_RIGHT, rigth_width);
+        if (right_width > 0) {
+            std::cout << make_border(BOTTOM_LEFT, BOTTOM_RIGHT, right_width);
         }
         std::cout << make_border(BOTTOM_LEFT, BOTTOM_RIGHT, main_width);
 
@@ -149,6 +162,7 @@ class Table {
     }
 
    private:
+    short alignment = 0;
     std::string title;
     std::string subtitle;
 
@@ -160,6 +174,31 @@ class Table {
     short raw_index = 0;
     std::vector<short> column_width;
 
+    short ignore_ansi_color(std::string text) {
+        short width = 0;
+        bool in_escape_sequence = false;
+
+        for (size_t i = 0; i < text.size(); ++i) {
+            if (text[i] == '\033' || text[i] == '\x1b') {
+                if (i + 1 < text.size() && text[i + 1] == '[') {
+                    in_escape_sequence = true;
+                    i++;
+                    continue;
+                }
+            }
+
+            if (in_escape_sequence) {
+                if (text[i] == 'm') {
+                    in_escape_sequence = false;
+                }
+                continue;
+            }
+            width++;
+        }
+
+        return width;
+    }
+
     short get_width_in_colored_text(const std::string& text,
                                     const short& initial_width = 0) {
         short width = initial_width;
@@ -169,6 +208,7 @@ class Table {
             if (text[i] == '\033' || text[i] == '\x1b') {
                 if (i + 1 < text.size() && text[i + 1] == '[') {
                     in_escape_sequence = true;
+
                     // continue;
                 }
             }
@@ -187,20 +227,21 @@ class Table {
 
     void menu_panel(std::vector<std::string> content, short width,
                     Align align = Align::Left) {
-        std::cout << TOP_LEFT
+        std::cout << Util::generate(' ', alignment) << TOP_LEFT
                   << Util::generate(HORIZONTAL, width) + TOP_RIGHT + NEW_LINE;
 
         for (short index = 0; index < content.size(); index++) {
-            std::cout << VERTICAL << format_text(content[index], width, align)
+            std::cout << Util::generate(' ', alignment) << VERTICAL
+                      << format_text(content[index], width, align)
                       << VERTICAL + NEW_LINE;
         }
 
-        std::cout << VERTICAL << Util::generate(' ', width) << VERTICAL
-                  << std::endl;
+        // std::cout << Util::generate(' ', alignment) << VERTICAL
+        //           << Util::generate(' ', width) << VERTICAL << std::endl;
     }
 
     void draw_top_table() {
-        std::cout << TOP_LEFT;
+        std::cout << Util::generate(' ', alignment) << TOP_LEFT;
         for (short key = 0; key < this->column_width.size(); key++) {
             std::cout << Util::generate(HORIZONTAL, this->column_width[key]);
             if (key != this->total_columns - 1) std::cout << TOP_T;
@@ -209,7 +250,7 @@ class Table {
     }
 
     void draw_top_menu() {
-        std::cout << LEFT_T;
+        std::cout << Util::generate(' ', alignment) << LEFT_T;
         for (short key = 0; key < this->column_width.size(); key++) {
             std::cout << Util::generate(HORIZONTAL, this->column_width[key]);
             if (key != this->total_columns - 1) std::cout << TOP_T;
@@ -218,7 +259,7 @@ class Table {
     }
 
     void draw_botton_table() {
-        std::cout << BOTTOM_LEFT;
+        std::cout << Util::generate(' ', alignment) << BOTTOM_LEFT;
         for (short key = 0; key < this->column_width.size(); key++) {
             std::cout << Util::generate(HORIZONTAL, this->column_width[key]);
             if (key != this->total_columns - 1) std::cout << BOTTOM_T;
@@ -227,7 +268,7 @@ class Table {
     }
 
     void draw_bottom_barrier_table() {
-        std::cout << LEFT_T;
+        std::cout << Util::generate(' ', alignment) << LEFT_T;
         for (short key = 0; key < this->column_width.size(); key++) {
             std::cout << Util::generate(HORIZONTAL, this->column_width[key]);
             if (key != this->total_columns - 1) std::cout << CROSS;
@@ -238,7 +279,7 @@ class Table {
     void print_menu_column() {
         menu_panel({title, subtitle}, total_width - 2, Align::Center);
         draw_top_menu();
-        std::cout << VERTICAL;
+        std::cout << Util::generate(' ', alignment) << VERTICAL;
         for (short key = 0; key < this->total_columns; key++) {
             for (const auto& column : columns[key]) {
                 std::cout << format_text(column.first, column.second[0],
@@ -252,9 +293,9 @@ class Table {
     }
 
     void print_column() {
-        panel({title, subtitle}, total_width - 2, Align::Center);
+        // panel({title, subtitle}, total_width - 2, Align::Center);
         draw_top_table();
-        std::cout << VERTICAL;
+        std::cout << Util::generate(' ', alignment) << VERTICAL;
         for (short key = 0; key < this->total_columns; key++) {
             for (const auto& column : columns[key]) {
                 std::cout << format_text(column.first, column.second[0],
@@ -269,7 +310,7 @@ class Table {
 
     void print_row() {
         for (short key = 0; key < this->raw_index; key++) {
-            std::cout << VERTICAL;
+            std::cout << Util::generate(' ', alignment) << VERTICAL;
             short index = 0;
             auto row = *rows[key].begin();
 
@@ -312,8 +353,8 @@ class Table {
     short get_sub_width(const std::vector<std::string> sub_zone) {
         short longest = 0;
         for (short i = 0; i < short(sub_zone.size()); i++) {
-            if ((short)sub_zone[i].size() > longest) {
-                longest = (short)sub_zone[i].size();
+            if (ignore_ansi_color(sub_zone[i]) > longest) {
+                longest = ignore_ansi_color(sub_zone[i]);
             }
         }
         if (longest == 0) return 0;
@@ -371,5 +412,7 @@ class Table {
         std::cout << std::endl;
     }
 };
+
+// short Table::alignment = 0;
 
 #endif  // CLASS_TABLE_HPP

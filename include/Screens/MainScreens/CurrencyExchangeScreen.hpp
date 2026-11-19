@@ -24,38 +24,29 @@ class CurrencyExchangeScreen : protected Screen {
 
    public:
     static void show_currency_exchange_menu() {
+        system(Config::clear.c_str());
+        draw_screen_header("console application");
         if (!has_permission(User::Permissions::CurrencyExchange)) {
             return;
         }
 
-        system(Config::clear.c_str());
-        draw_screen_header("console application", "", 39);
+        std::vector<std::string> menus{
+            "List Currencies.",     "Find Currency.", "Update Rate.",
+            "Currency Calculator.", "Main Menu",
+        };
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(57) << std::left << ""
-                  << "Currency Exchange Menu\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[1] List Currencies.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[2] Find Currency.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[3] Update Rate.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[4] Currency Calculator.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[5] Main Menu.\n";
+        Table table{"Currency Exchange Menu"};
+        table.add_column("#", 4, Table::Align::Center);
+        table.add_column(" Options", 64, Table::Align::Center);
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-
+        table.setAlignment(25);
+        for (short i = 0; i < menus.size(); i++) {
+            table.add_row({std::to_string(i + 1), menus[i]});
+        }
+        table.print_menu();
         perform_currency_exchange_menu_option(
-            (CurrencyExchangeOptions)read_currency_exchange_menu_option());
+            (CurrencyExchangeOptions)read_currency_exchange_menu_option(
+                menus.size()));
     }
 
    private:
@@ -68,22 +59,26 @@ class CurrencyExchangeScreen : protected Screen {
         show_currency_exchange_menu();
     }
 
-    static short read_currency_exchange_menu_option() {
+    static short read_currency_exchange_menu_option(short max) {
         bool valid = false;
         short choice;
         std::cout << std::setw(37) << std::left << ""
-                  << "Choose what do you want to do [1 - 5]: ";
+                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
         while (!valid) {
             std::cin >> choice;
             valid = InputValidate::is_valid();
             if (!valid) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Invalid Input, Enter again [1 - 5]: ";
+                          << Color::yellow("[!] Invalid Input") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 continue;
             }
-            if (!InputValidate::in_range<short>(choice, 1, 5)) {
+            if (!InputValidate::in_range<short>(choice, 1, max)) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Input Out Of Range, Enter again [1 - 5]: ";
+                          << Color::yellow("[!] Input Out Of Range") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 valid = false;
             }
         }

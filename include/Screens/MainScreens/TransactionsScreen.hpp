@@ -27,40 +27,29 @@ class TransactionsScreen : protected Screen {
 
    public:
     static void show_transactions_menu() {
+        system(Config::clear.c_str());
+        draw_screen_header("console application");
         if (!has_permission(User::Permissions::Transacions)) {
             return;
         }
 
-        system(Config::clear.c_str());
-        draw_screen_header("console application", "", 39);
+        std::vector<std::string> menus{
+            "Deposit.",        "Withdraw.",     "Transfer.",
+            "Total Balances.", "Trasfer Logs.", "Main Menu",
+        };
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(57) << std::left << ""
-                  << "Transactions Menu\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[1] Deposit.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[2] Withdraw.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[3] Transfer.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[4] Total Balances.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[5] Transfer Logs.\n";
-        std::cout << std::setw(37) << std::left << ""
-                  << "\t[6] Main Menu.\n";
+        Table table{"Transactions Menu"};
+        table.add_column("#", 4, Table::Align::Center);
+        table.add_column(" Options", 64, Table::Align::Center);
 
-        std::cout << std::setw(37) << std::left << ""
-                  << "========================================================="
-                     "=========\n";
-
+        table.setAlignment(25);
+        for (short i = 0; i < menus.size(); i++) {
+            table.add_row({std::to_string(i + 1), menus[i]});
+        }
+        table.print_menu();
         perform_transactions_menu_option(
-            (TransactionsMenuOptions)read_transactions_menu_option());
+            (TransactionsMenuOptions)read_transactions_menu_option(
+                menus.size()));
     }
 
    private:
@@ -73,22 +62,26 @@ class TransactionsScreen : protected Screen {
         show_transactions_menu();
     }
 
-    static short read_transactions_menu_option() {
+    static short read_transactions_menu_option(short max) {
         bool valid = false;
         short choice;
         std::cout << std::setw(37) << std::left << ""
-                  << "Choose what do you want to do [1 - 6]: ";
+                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
         while (!valid) {
             std::cin >> choice;
             valid = InputValidate::is_valid();
             if (!valid) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Invalid Input, Enter again [1 - 6]: ";
+                          << Color::yellow("[!] Invalid Input") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 continue;
             }
-            if (!InputValidate::in_range<short>(choice, 1, 6)) {
+            if (!InputValidate::in_range<short>(choice, 1, max)) {
                 std::cout << std::setw(37) << std::left << ""
-                          << "Input Out Of Range, Enter again [1 - 6]: ";
+                          << Color::yellow("[!] Input Out Of Range") +
+                                 ", Enter again [1 - "
+                          << max << "]: ";
                 valid = false;
             }
         }

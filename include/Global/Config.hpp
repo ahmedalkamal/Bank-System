@@ -21,6 +21,7 @@ bool is_linux() { return OS_UNIX; }
 bool is_windows() { return OS_WINDOWS; }
 
 struct Config {
+    static std::string const separator;
     static std::string const clear;
     static std::string const drive_letter;
 
@@ -33,6 +34,7 @@ struct Config {
     static std::string const transfer_log_file;
 };
 
+std::string const Config::separator = "#//#";
 std::string const Config::clear = (is_windows() ? "cls" : "clear");
 std::string const Config::drive_letter = (is_windows() ? "\\" : "/");
 

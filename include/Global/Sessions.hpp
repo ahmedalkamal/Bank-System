@@ -3,6 +3,6 @@
 
 #include "../Core/User.hpp"
 
-User CurrentUser = User::find("", "");
+User CurrentUser = User::find("", "").response;
 
 #endif  // HEADER_SESSIONS_HPP

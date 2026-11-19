@@ -1,3 +1,7 @@
+/*
+ the backup functions need update...
+*/
+
 #ifndef CLASS_FILES_HPP
 #define CLASS_FILES_HPP
 
@@ -6,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "../Global/ResultStatus.hpp"
 #include "Property.hpp"
 
 class Files {
@@ -14,7 +19,7 @@ class Files {
         setFilePath(file_path);
         if (safety) {
             // std::vector<std::string> data = load_data_list();
-            setBackup(load_data_list());
+            // setBackup(load_data_list());
         }
     }
 
@@ -26,21 +31,22 @@ class Files {
     }
     // getter functions
     std::string getFilePath() { return this->file_path_; }
-    std::vector<std::string> getBackUp() { return this->backup_; }
+    // std::vector<std::string> getBackUp() { return this->backup_; }
 
     // properties get and set
     Property<std::string> file_path{
         [this]() { return getFilePath(); },
         [this](const std::string& value) { setFilePath(value); }};
-    Property<std::vector<std::string>> backup{[this]() { return getBackUp(); }};
+    // Property<std::vector<std::string>> backup{[this]() { return getBackUp();
+    // }};
 
     // functions
-    bool change_safe_mode(bool value) {
-        this->safety_mode_ = value;
-        return value;
-    }
+    // bool change_safe_mode(bool value) {
+    //     this->safety_mode_ = value;
+    //     return value;
+    // }
 
-    std::vector<std::string> load_data_list() {
+    Status<std::vector<std::string>> load_data_list() {
         std::fstream file;
         std::vector<std::string> data;
 
@@ -51,29 +57,32 @@ class Files {
                 data.push_back(line);
             }
             file.close();
-        }
-        return data;
+            return {data, StatusCode::None};
+
+        } else
+            return {{}, StatusCode::FileReadFailed};
     }
 
-    bool append_to_file(const std::string& line) {
-        if (this->safety_mode_) {
-            setBackup(load_data_list());
-        }
+    Status<bool> append_to_file(const std::string& line) {
+        // if (this->safety_mode_) {
+        //     setBackup(load_data_list());
+        // }
         std::fstream file;
         file.open(this->getFilePath(), std::ios::out | std::ios::app);
 
         if (file.is_open()) {
             file << line << '\n';
             file.close();
-            return true;
-        }
-        return false;
+            return {true, StatusCode::None};
+        } else
+            return {false, StatusCode::FileOpenFailed};
+        // return {false, StatusCode::FileWriteFailed};
     }
 
-    bool update_file(const std::vector<std::string>& data) {
-        if (this->safety_mode_) {
-            setBackup(data);
-        }
+    Status<bool> update_file(const std::vector<std::string>& data) {
+        // if (this->safety_mode_) {
+        //     setBackup(data);
+        // }
         std::fstream file;
         file.open(this->getFilePath(), std::ios::out);
 
@@ -82,25 +91,26 @@ class Files {
                 file << record_line << '\n';
             }
             file.close();
-            return true;
-        }
-        return false;
+            return {true, StatusCode::None};
+        } else
+            return {false, StatusCode::FileOpenFailed};
+        // return {false, StatusCode::FileWriteFailed};
     }
 
-    // resore last data before update or append..
-    bool restore_backup() {
-        if (!this->safety_mode_) {
-            return false;
-        }
-        update_file(getBackUp());
-        return true;
-    }
+    // // resore last data before update or append..
+    // bool restore_backup() {
+    //     if (!this->safety_mode_) {
+    //         return false;
+    //     }
+    //     update_file(getBackUp());
+    //     return true;
+    // }
 
    private:
-    bool safety_mode_;
     std::string file_path_;
-    std::vector<std::string> backup_;
+    // bool safety_mode_;
+    // std::vector<std::string> backup_;
 
-    void setBackup(std::vector<std::string> data) { this->backup_ = data; }
+    // void setBackup(std::vector<std::string> data) { this->backup_ = data; }
 };
 #endif  // CLASS_FILES_HPP

@@ -12,36 +12,53 @@
 class CurrenciesListScreen : protected Screen {
    public:
     static void show_currencies_list_screen() {
-        std::vector<Currency> currencies = Currency::get_currency_list();
-
+        std::vector<Currency> currencies =
+            Currency::get_currency_list().response;
         std::string title = "Currencies List Screen.";
-        std::string subtitle =
-            "\t" + std::to_string(currencies.size()) + " Currency.";
+        std::string subtitle = std::to_string(currencies.size()) + " Currency.";
+
         draw_screen_header(title, subtitle);
 
-        std::string line = std::string(112, '_');
+        Table table{title, subtitle};
+        table.setAlignment(11);
 
-        std::cout << std::setw(8) << "" << line << "\n\n";
-        std::cout << std::setw(10) << std::right << "| " << std::setw(35)
-                  << std::left << "Country" << "| " << std::setw(8) << "Code"
-                  << "| " << std::setw(50) << "Name" << "| " << std::setw(12)
-                  << "Rate/(1$)" << "\n";
-        std::cout << std::setw(8) << "" << line << "\n\n";
-        for (Currency currency : currencies) {
-            print_currency_line(currency);
-            std::cout << std::endl;
+        table.add_column("Country", 27, Table::Align::Center);
+        table.add_column("Code", 8, Table::Align::Center);
+        table.add_column("Name", 45, Table::Align::Center);
+        table.add_column("Rate/(1$)", 12, Table::Align::Center);
+
+        if (currencies.size() == 0) {
+            table.panel(
+                {Color::bright_red("No Currencies Available In The System!")},
+                95, Table::Align::Center, true);
+        } else {
+            for (Currency currency : currencies) {
+                table.add_row({
+                    " " + currency.getCountry(),
+                    " " + currency.getCurrencyCode(),
+                    " " + currency.getCurrencyName(),
+                    " " + format_balance(std::to_string(currency.getRate())),
+                });
+            }
+            table.print_table();
         }
-        std::cout << std::setw(8) << "" << line << "\n\n";
     }
 
    private:
-    static void print_currency_line(Currency currency) {
-        std::cout << std::setw(10) << std::right << "| " << std::setw(35)
-                  << std::left << currency.getCountry() << "| " << std::setw(8)
-                  << currency.getCurrencyCode() << "| " << std::setw(50)
-                  << currency.getCurrencyName() << "| " << std::setw(12)
-                  << currency.getRate();
-    }
+    static std::string format_balance(std::string balance) {
+        short zero = 0;
+        for (short i = short(balance.find(".")); i < balance.size(); i++) {
+            if (zero == 3) {
+                return balance.substr(0, i - 1);
+            }
+            if (balance[i] == '0') {
+                zero++;
+            } else {
+                zero = 0;
+            }
+        }
+        return "0.0";
+    };
 };
 
 #endif  // CLASS_CURRENCIES_LIST_SCREEN_HPP
