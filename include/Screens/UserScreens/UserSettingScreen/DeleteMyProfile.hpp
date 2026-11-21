@@ -29,7 +29,8 @@ class DeleteProfileScreen : protected Screen {
             95, Table::Align::Left, true);
 
         if (CurrentUser.is_admin()) {
-            table.panel({Color::bright_red("Admin cannot delete his account")},
+            table.panel({Color::bright_red(
+                            "The admin cannot delete their won account")},
                         95, Table::Align::Center, true);
             return;
         }
@@ -47,7 +48,6 @@ class DeleteProfileScreen : protected Screen {
                                      "Your Account Deleted Successfully.\n");
 
                 Util::clear_buffer();
-                // }
                 std::cout << "\n\nPress enter to continue...";
                 std::cin.get();
 

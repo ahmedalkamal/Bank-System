@@ -14,31 +14,35 @@ class DeleteUserScreen : protected Screen {
    public:
     static void show_delete_user_screen() {
         draw_screen_header("Delete User Screen.");
-        std::string username = "";
-
-        std::cout << std::setw(30) << std::left << "";
-        username = InputValidate::read_template<std::string>(
-            "[+] Please enter username: ");
-        while (!User::is_user_exist(username)) {
-            std::cout << "\n" << std::setw(30) << std::left << "";
-            username = InputValidate::read_template<std::string>(
-                "[+] " + Color::bright_yellow("Username is not found") +
-                ", choose another one: ");
-        }
+        std::string username =
+            ScreenHelper::read_object_id("username", true, User::find);
+        if (username.empty()) return;
 
         User user = User::find(username).response;
 
         if (CurrentUser.getUserName() == user.getUserName()) {
             std::cout << "\n" << std::setw(30) << std::left << "";
             std::cout << "[!] " +
-                             Color::bright_red("Cannot delete your account!") +
-                             ", go to setting.\n";
+                             Color::bright_red(
+                                 "You cannot delete your account from here!") +
+                             ", Go to setting.\n";
             return;
         }
         if (user.is_admin()) {
             std::cout << "\n" << std::setw(30) << std::left << "";
             std::cout << "[!] " + Color::bright_red(
-                                      "Cannot delete Admin account!\n");
+                                      "You cannot delete the admin account!\n");
+            return;
+        }
+
+        if (user.check_access_permission(User::Permissions::FullAccess)
+                .response &&
+            !CurrentUser.is_admin()) {
+            std::cout << "\n" << std::setw(30) << std::left << "";
+            std::cout
+                << "[!] " +
+                       Color::bright_red(
+                           "You don't have access to delete this account!\n");
             return;
         }
 
@@ -65,23 +69,16 @@ class DeleteUserScreen : protected Screen {
 
    private:
     static void print_user_card(User user) {
-        Table table{"User Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({"Full Name   ", user.getFullName()},
-                      Table::Align::Center);
-        table.add_row({"Email       ", user.getEmail()}, Table::Align::Center);
-        table.add_row({"Phone       ", user.getPhone()}, Table::Align::Center);
-        table.add_row({"User Name   ", user.getUserName()},
-                      Table::Align::Center);
-        table.add_row({"Passowrd    ", user.getPassword()},
-                      Table::Align::Center);
-        table.add_row({"Permissions ", std::to_string(user.getPermissions())},
-                      Table::Align::Center);
+        rows.insert({"Full Name", user.getFullName()});
+        rows.insert({"Email", user.getEmail()});
+        rows.insert({"Phone", user.getPhone()});
+        rows.insert({"User Name", user.getUserName()});
+        rows.insert({"Password", user.getPassword()});
+        rows.insert({"Permissions", std::to_string(user.getPermissions())});
 
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("User Card", rows);
     }
 };
 

@@ -15,17 +15,9 @@ class FindUserScreen : protected Screen {
     static void show_find_user_screen() {
         draw_screen_header("Find User Screen.");
 
-        std::string username = "";
-
-        std::cout << std::setw(30) << std::left << "";
-        std::cout << "[+] Please Enter Account Number: ";
-        username = InputValidate::read_template<std::string>();
-        // while (!User::is_user_exist(username)) {
-        //     std::cout << "\n" << std::setw(30) << std::left << "";
-        //     username = InputValidate::read_template<std::string>(
-        //         "[+] " + Color::bright_yellow("User is not found") +
-        //         ", choose another one: ");
-        // }
+        std::string username =
+            ScreenHelper::read_object_id("username", true, User::find);
+        if (username.empty()) return;
 
         User user = User::find(username).response;
         if (!user.is_empty()) {
@@ -42,23 +34,19 @@ class FindUserScreen : protected Screen {
 
    private:
     static void print_user_card(User user) {
-        Table table{"User Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({"Full Name   ", user.getFullName()},
-                      Table::Align::Center);
-        table.add_row({"Email       ", user.getEmail()}, Table::Align::Center);
-        table.add_row({"Phone       ", user.getPhone()}, Table::Align::Center);
-        table.add_row({"User Name   ", user.getUserName()},
-                      Table::Align::Center);
-        table.add_row({"Passowrd    ", user.getPassword()},
-                      Table::Align::Center);
-        table.add_row({"Permissions ", std::to_string(user.getPermissions())},
-                      Table::Align::Center);
+        rows.insert({"Full Name", user.getFullName()});
+        rows.insert({"Email", user.getEmail()});
+        rows.insert({"Phone", user.getPhone()});
+        rows.insert({"User Name", user.getUserName()});
+        if (CurrentUser.is_admin()) {
+            rows.insert({"Password", Util::decrypt(user.getPassword(),
+                                                   Config::encryptionKey)});
+        }
+        rows.insert({"Permissions", std::to_string(user.getPermissions())});
 
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("User Card", rows);
     }
 };
 

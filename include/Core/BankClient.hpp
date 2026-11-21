@@ -14,7 +14,6 @@
 #include "Date.hpp"
 #include "Files.hpp"
 #include "Person.hpp"
-#include "Property.hpp"
 
 class BankClient : public Person {
    private:
@@ -87,17 +86,7 @@ class BankClient : public Person {
         };
     }
 
-    // properties get and set
-    Property<std::string> account_number{
-        [this]() { return getAccountNumber(); }};
-    Property<std::string> pin_code{
-        [this]() { return getPinCode(); },
-        [this](const std::string& value) { setPinCode(value); }};
-    Property<float> balance{[this]() { return getBalance(); },
-                            [this](const float& value) { setBalance(value); }};
-
     // functions
-
     static Status<std::vector<BankClient>> get_clients_list() {
         std::vector<BankClient> objects;
 
@@ -105,19 +94,6 @@ class BankClient : public Person {
             objects.push_back(convert_to_object(pair.second));
         }
         return {objects, StatusCode::None};
-
-        // std::vector<BankClient> objects;
-        // Files clients_file{Config::clients_file};
-        // Status<std::vector<std::string>> clients =
-        //     clients_file.load_data_list();
-
-        // if (clients.issuccessful()) {
-        //     for (std::string& dataline : clients.response) {
-        //         objects.push_back(convert_to_object(dataline));
-        //     }
-        //     return {objects, StatusCode::None};
-        // }
-        // return {{}, clients.status_code};
     }
 
     static Status<std::vector<TransferLog>> get_transfer_logs() {
@@ -261,9 +237,6 @@ class BankClient : public Person {
     }
 
    private:
-    // std::map<std::string, BankClient(get_empty_object())> clients_data;
-    // clients_data;
-
     Files clients_file;
     Files transfer_log_file;
     ObjectMode mode_;
@@ -271,7 +244,6 @@ class BankClient : public Person {
     std::string account_number_;
     std::string pin_code_;
     float balance_;
-    // bool marked_for_delete_ = false;
 
     void setAccountNumber(std::string value) {
         if (value.empty()) {
@@ -303,9 +275,6 @@ class BankClient : public Person {
         };
     }
     static std::vector<std::string> convert_to_vector(BankClient object) {
-        // if (object.is_empty()) {
-        //     return {};
-        // }
         return {
             object.getFirstName(),
             object.getLastName(),
@@ -339,9 +308,7 @@ class BankClient : public Person {
     std::string get_transfer_log(float amount, BankClient recipient,
                                  std::string username,
                                  std::string sep = Config::separator) {
-        std::vector<std::string> record;  // = convert_to_vector(*this);
-        // std::vector<std::string>::iterator iter = record.begin();
-        // record.erase(iter, iter + 4);
+        std::vector<std::string> record;
         record.push_back(Date::get_time_string());
         record.push_back(getAccountNumber());
         record.push_back(recipient.getAccountNumber());
@@ -386,9 +353,10 @@ class BankClient : public Person {
         if (file.is_open()) {
             std::string object_line;
             while (getline(file, object_line)) {
-                std::string username = _get_account_number_for_map(object_line);
-                // std::cout << username;
-                clients.insert({username, object_line});
+                std::string account_number =
+                    _get_account_number_for_map(object_line);
+
+                clients.insert({account_number, object_line});
             }
             file.close();
             return clients;

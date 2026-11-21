@@ -8,6 +8,7 @@
 
 #include "../../Core/Currency.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class CurrenciesListScreen : protected Screen {
    public:
@@ -37,7 +38,7 @@ class CurrenciesListScreen : protected Screen {
                     " " + currency.getCountry(),
                     " " + currency.getCurrencyCode(),
                     " " + currency.getCurrencyName(),
-                    " " + format_balance(std::to_string(currency.getRate())),
+                    " " + ScreenHelper::format_number(currency.getRate()),
                 });
             }
             table.print_table();
@@ -45,20 +46,6 @@ class CurrenciesListScreen : protected Screen {
     }
 
    private:
-    static std::string format_balance(std::string balance) {
-        short zero = 0;
-        for (short i = short(balance.find(".")); i < balance.size(); i++) {
-            if (zero == 3) {
-                return balance.substr(0, i - 1);
-            }
-            if (balance[i] == '0') {
-                zero++;
-            } else {
-                zero = 0;
-            }
-        }
-        return "0.0";
-    };
 };
 
 #endif  // CLASS_CURRENCIES_LIST_SCREEN_HPP

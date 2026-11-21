@@ -3,12 +3,14 @@
 
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "../../Core/User.hpp"
 #include "../../Utils/Color.hpp"
 #include "../../Utils/Table.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 // First account created will become the Admin.
 
@@ -53,46 +55,28 @@ class FirstUse : protected Screen {
         std::cin >> username;
         User user = User::get_addnew_object(username);
 
-        std::cout << std::setw(30) << std::left << "";
-        user.first_name = InputValidate::read_template<std::string>(
-            "[+] Please Enter Firs Name: ");
+        ScreenHelper::read_person_info<User>(user);
 
         std::cout << std::setw(30) << std::left << "";
-        user.last_name = InputValidate::read_template<std::string>(
-            "[+] Please Enter Last Name: ");
+        user.setPassword(InputValidate::read_template<std::string>(
+            "[+] Please Enter Password: "));
 
-        std::cout << std::setw(30) << std::left << "";
-        user.email = InputValidate::read_template<std::string>(
-            "[+] Please Enter Email: ");
-
-        std::cout << std::setw(30) << std::left << "";
-        user.phone = InputValidate::read_template<std::string>(
-            "[+] Please Enter Phone: ");
-
-        std::cout << std::setw(30) << std::left << "";
-        user.password = InputValidate::read_template<std::string>(
-            "[+] Please Enter Password: ");
-
-        user.permissions = -2;
+        user.setPermissions(-2);
 
         return user;
     }
 
     static void print_user_card(User user) {
-        Table table{"User Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({" Full Name   ", " " + user.getFullName()});
-        table.add_row({" Email       ", " " + user.getEmail()});
-        table.add_row({" Phone       ", " " + user.getPhone()});
-        table.add_row({" User Name   ", " " + user.getUserName()});
-        table.add_row({" Passowrd    ", " " + user.getPassword()});
-        table.add_row(
-            {" Permissions ", " " + std::to_string(user.getPermissions())});
+        rows.insert({"Full Name", user.getFullName()});
+        rows.insert({"Email", user.getEmail()});
+        rows.insert({"Phone", user.getPhone()});
+        rows.insert({"User Name", user.getUserName()});
+        rows.insert({"Password", user.getPassword()});
+        rows.insert({"Permissions", std::to_string(user.getPermissions())});
 
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("User Card", rows);
     }
 };
 

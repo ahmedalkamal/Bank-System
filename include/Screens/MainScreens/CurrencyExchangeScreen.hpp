@@ -11,6 +11,7 @@
 #include "../CurrencyScreens/FindCurrencyScreen.hpp"
 #include "../CurrencyScreens/UpdateCurrencyScreen.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class CurrencyExchangeScreen : protected Screen {
    private:
@@ -25,64 +26,38 @@ class CurrencyExchangeScreen : protected Screen {
    public:
     static void show_currency_exchange_menu() {
         system(Config::clear.c_str());
-        draw_screen_header("console application");
+        draw_screen_header("Currency Exchange Screen");
         if (!has_permission(User::Permissions::CurrencyExchange)) {
             return;
         }
 
         std::vector<std::string> menus{
-            "List Currencies.",     "Find Currency.", "Update Rate.",
-            "Currency Calculator.", "Main Menu",
+            " List Currencies.",     " Find Currency.", " Update Rate.",
+            " Currency Calculator.", " Main Menu.",
         };
 
-        Table table{"Currency Exchange Menu"};
-        table.add_column("#", 4, Table::Align::Center);
+        Table table{"Menu"};
+        table.add_column("No.", 4, Table::Align::Center);
         table.add_column(" Options", 64, Table::Align::Center);
 
         table.setAlignment(25);
+
         for (short i = 0; i < menus.size(); i++) {
-            table.add_row({std::to_string(i + 1), menus[i]});
+            std::string num = String::zfill(std::to_string(i + 1), 2);
+
+            table.add_row({num, menus[i]});
         }
         table.print_menu();
         perform_currency_exchange_menu_option(
-            (CurrencyExchangeOptions)read_currency_exchange_menu_option(
-                menus.size()));
+            (CurrencyExchangeOptions)ScreenHelper::read_option_enum(
+                "Please choose option: ", menus.size()));
     }
 
    private:
     static void back_to_currency_exchange_menu() {
-        // if (std::cin.fail() || std::cin.peek() != '\n') {
-        Util::clear_buffer();
-        // }
-        std::cout << "Press enter to go back to Currency Exchange Menu...";
-        std::cin.get();
-        show_currency_exchange_menu();
-    }
-
-    static short read_currency_exchange_menu_option(short max) {
-        bool valid = false;
-        short choice;
-        std::cout << std::setw(37) << std::left << ""
-                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
-        while (!valid) {
-            std::cin >> choice;
-            valid = InputValidate::is_valid();
-            if (!valid) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Invalid Input") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                continue;
-            }
-            if (!InputValidate::in_range<short>(choice, 1, max)) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Input Out Of Range") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                valid = false;
-            }
-        }
-        return choice - 1;
+        ScreenHelper::back_to_selected_screen(
+            "Press enter to go back to Currency Exchange Menu...",
+            show_currency_exchange_menu);
     }
 
     static void show_list_currencies_screen() {

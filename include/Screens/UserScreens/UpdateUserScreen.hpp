@@ -15,19 +15,27 @@ class UpdateUserScreen : protected Screen {
    public:
     static void show_update_user_screen() {
         draw_screen_header("Update User Screen");
-        std::string username = "";
-
-        std::cout << std::setw(30) << std::left << "";
-        username = InputValidate::read_template<std::string>(
-            "[+] Please enter username: ");
-        while (!User::is_user_exist(username)) {
-            std::cout << "\n" << std::setw(30) << std::left << "";
-            username = InputValidate::read_template<std::string>(
-                "[+] " + Color::bright_yellow("Username is not found") +
-                ", choose another one: ");
-        }
+        std::string username =
+            ScreenHelper::read_object_id("username", true, User::find);
+        if (username.empty()) return;
 
         User user = User::find(username).response;
+
+        if (CurrentUser.getUserName() == user.getUserName()) {
+            std::cout << "\n" << std::setw(30) << std::left << "";
+            std::cout << "[!] " +
+                             Color::bright_red(
+                                 "You cannot update your account from here!") +
+                             ", Go to setting.\n";
+            return;
+        }
+        if (user.is_admin()) {
+            std::cout << "\n" << std::setw(30) << std::left << "";
+            std::cout << "[!] " + Color::bright_red(
+                                      "You cannot update the admin account!\n");
+            return;
+        }
+
         print_user_card(user);
 
         char answer = 'n';
@@ -47,8 +55,7 @@ class UpdateUserScreen : protected Screen {
                 case User::SaveStatus::FailedEmpty:
                     std::cout << "\n" << std::setw(30) << std::left << "";
                     std::cout << "[!] " + Color::bright_red(
-                                              "Error user was not updated "
-                                              "because it's empty!");
+                                              "Error user was not updated!\n");
                     break;
             }
         }
@@ -56,118 +63,41 @@ class UpdateUserScreen : protected Screen {
 
    private:
     static void read_user_info(User& user) {
-        std::cout << std::setw(30) << std::left << "";
-        user.setFirstName(InputValidate::read_template<std::string>(
-            "[+] Please Enter Firs Name: "));
+        ScreenHelper::read_person_info<User>(user);
 
-        std::cout << std::setw(30) << std::left << "";
-        user.setLastName(InputValidate::read_template<std::string>(
-            "[+] Please Enter Last Name: "));
+        if (CurrentUser.is_admin()) {
+            std::cout << std::setw(30) << std::left << "";
+            user.setPassword(InputValidate::read_template<std::string>(
+                "[+] Please Enter Password: "));
+        } else {
+            user.setPassword(
+                Util::decrypt(user.getPassword(), Config::encryptionKey));
+        }
 
-        std::cout << std::setw(30) << std::left << "";
-        user.setEmail(InputValidate::read_template<std::string>(
-            "[+] Please Enter Email: "));
-
-        std::cout << std::setw(30) << std::left << "";
-        user.setPhone(InputValidate::read_template<std::string>(
-            "[+] Please Enter Phone: "));
-
-        std::cout << std::setw(30) << std::left << "";
-        user.setPassword(InputValidate::read_template<std::string>(
-            "[+] Please Enter Password: "));
-
-        if (user.permissions != short(User::Permissions::Admin)) {
+        if ((!user.check_access_permission(User::Permissions::FullAccess)
+                  .response &&
+             CurrentUser.check_access_permission(User::Permissions::FullAccess)
+                 .response) ||
+            CurrentUser.is_admin()) {
             std::cout << std::setw(30) << std::left << "";
             std::cout << "[#] Please Enter Permissions: \n";
-            user.setPermissions(read_permissions_to_set());
+            user.setPermissions(ScreenHelper::read_permissions_to_set());
         }
     }
 
     static void print_user_card(User user) {
-        Table table{"User Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({"Full Name   ", user.getFullName()},
-                      Table::Align::Center);
-        table.add_row({"Email       ", user.getEmail()}, Table::Align::Center);
-        table.add_row({"Phone       ", user.getPhone()}, Table::Align::Center);
-        table.add_row({"User Name   ", user.getUserName()},
-                      Table::Align::Center);
-        table.add_row({"Passowrd    ", user.getPassword()},
-                      Table::Align::Center);
-        table.add_row({"Permissions ", std::to_string(user.getPermissions())},
-                      Table::Align::Center);
+        rows.insert({"Full Name", user.getFullName()});
+        rows.insert({"Email", user.getEmail()});
+        rows.insert({"Phone", user.getPhone()});
+        rows.insert({"User Name", user.getUserName()});
+        if (CurrentUser.is_admin()) {
+            rows.insert({"Password", user.getPassword()});
+        }
+        rows.insert({"Permissions", std::to_string(user.getPermissions())});
 
-        table.setAlignment(25);
-        table.print_table();
-    }
-
-    static short read_permissions_to_set() {
-        short permissions = 0;
-        // char answer = 'n';
-
-        std::cout << std::setw(30) << std::left << "";
-        char answer = InputValidate::read_template<char>(
-            "[?] Do you want to give Full access y/n ? ");
-        if (std::tolower(answer) == 'y')
-            return (short)User::Permissions::FullAccess;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Show clients list y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::ListClients;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Add new clients y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::AddNewClient;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Delete client y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::DeleteClient;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Update clients y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::UpdateClients;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Find client y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::FindClient;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Transactios y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::Transacions;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Manage users y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::ManageUsers;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Show Login Records y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::ListLoginRecords;
-
-        std::cout << std::setw(30) << std::left << "";
-        answer = InputValidate::read_template<char>(
-            "[?] Give access to Currency Exchange Records y/n ? ");
-        if (std::tolower(answer) == 'y')
-            permissions += (short)User::Permissions::CurrencyExchange;
-
-        return permissions;
+        ScreenHelper::print_object_card("User Card", rows);
     }
 };
 

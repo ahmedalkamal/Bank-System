@@ -26,27 +26,27 @@ class LoginRecordsScreen : protected Screen {
         Table table{title, subtitle};
         table.setAlignment(11);
 
-        table.add_column(" Date / Time", 32, Table::Align::Center);
-        table.add_column("User Name", 20, Table::Align::Center);
-        table.add_column("Password", 20, Table::Align::Center);
-        table.add_column("Permissions", 20, Table::Align::Center);
-
         if (records.size() == 0) {
             table.panel({Color::bright_red(
                             "No Login Records Available In The System!")},
                         95, Table::Align::Center, true);
-
-        } else {
-            for (User::LoginRecord record : records) {
-                table.add_row({
-                    " " + record.Time,
-                    " " + record.Username,
-                    " " + record.Password,
-                    " " + record.Permission,
-                });
-            }
-            table.print_table();
+            return;
         }
+
+        table.add_column("Date / Time", 32, Table::Align::Center);
+        table.add_column("User Name", 20, Table::Align::Center);
+        table.add_column("Password", 20, Table::Align::Center);
+        table.add_column("Permissions", 20, Table::Align::Center);
+
+        for (User::LoginRecord record : records) {
+            table.add_row({
+                " " + record.Time,
+                " " + record.Username,
+                " " + record.Password,
+                " " + record.Permission,
+            });
+        }
+        table.print_table();
     }
 };
 

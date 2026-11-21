@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include "Property.hpp"
-
 class Person {
    public:
     Person(const std::string& first_name, const std::string& last_name,
@@ -56,21 +54,6 @@ class Person {
     }
     std::string getEmail() { return this->email_; }
     std::string getPhone() { return this->phone_; }
-
-    // properties get and set
-    Property<std::string> first_name{
-        [this]() { return getFirstName(); },
-        [this](const std::string& value) { setFirstName(value); }};
-    Property<std::string> last_name{
-        [this]() { return getLastName(); },
-        [this](const std::string& value) { setLastName(value); }};
-    Property<std::string> full_name{[this]() { return getFullName(); }};
-    Property<std::string> email{
-        [this]() { return getEmail(); },
-        [this](const std::string& value) { setEmail(value); }};
-    Property<std::string> phone{
-        [this]() { return getPhone(); },
-        [this](const std::string& value) { setPhone(value); }};
 
    private:
     std::string first_name_;

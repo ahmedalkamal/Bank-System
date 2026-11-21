@@ -3,12 +3,14 @@
 
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "../../Core/BankClient.hpp"
 #include "../../Core/User.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class UpdateClientScreen : protected Screen {
    public:
@@ -18,7 +20,11 @@ class UpdateClientScreen : protected Screen {
             return;
         }
 
-        std::string account_number = "";
+        std::string account_number = ScreenHelper::read_object_id<BankClient>(
+            "Account Number", true, BankClient::find);
+        if (account_number.empty()) {
+            return;
+        }
 
         std::cout << std::setw(30) << std::left << "";
         std::cout << "[+] Please Enter Account Number: ";
@@ -58,62 +64,26 @@ class UpdateClientScreen : protected Screen {
     }
 
    private:
-    static float read_balance() {
-        std::cout << std::setw(30) << std::left << "";
-        float balance = InputValidate::input<float>(
-            "[+] Please Enter Balance: ",
-            Color::bright_red(std::string(30, ' ') +
-                              "[+] Please Enter Balance: "));
-        if (balance < 0) {
-            return 0;
-        }
-        return balance;
-    }
-
     static void read_client_info(BankClient& client) {
-        std::cout << std::setw(30) << std::left << "";
-        client.setFirstName(InputValidate::read_template<std::string>(
-            "[+] Please Enter Firs Name: "));
-
-        std::cout << std::setw(30) << std::left << "";
-        client.setLastName(InputValidate::read_template<std::string>(
-            "[+] Please Enter Last Name: "));
-
-        std::cout << std::setw(30) << std::left << "";
-        client.setEmail(InputValidate::read_template<std::string>(
-            "[+] Please Enter Email: "));
-
-        std::cout << std::setw(30) << std::left << "";
-        client.setPhone(InputValidate::read_template<std::string>(
-            "[+] Please Enter Phone: "));
+        ScreenHelper::read_person_info<BankClient>(client);
 
         std::cout << std::setw(30) << std::left << "";
         client.setPinCode(InputValidate::read_template<std::string>(
             "[+] Please Enter Pin Code: "));
-
-        // client.balance = read_balance();
     }
 
     static void print_client_card(BankClient client) {
-        Table table{"Client Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({"Full Name     ", client.getFullName()},
-                      Table::Align::Center);
-        table.add_row({"Email         ", client.getEmail()},
-                      Table::Align::Center);
-        table.add_row({"Phone         ", client.getPhone()},
-                      Table::Align::Center);
-        table.add_row({"Account Number", client.getAccountNumber()},
-                      Table::Align::Center);
-        table.add_row({"Pin Code      ", client.getPinCode()},
-                      Table::Align::Center);
-        table.add_row({"Balance       ", std::to_string(client.getBalance())},
-                      Table::Align::Center);
+        rows.insert({"Full Name", client.getFullName()});
+        rows.insert({"Email", client.getEmail()});
+        rows.insert({"Phone", client.getPhone()});
+        rows.insert({"Account Number", client.getAccountNumber()});
+        rows.insert({"Pin Code", client.getPinCode()});
+        rows.insert(
+            {"Balance", ScreenHelper::format_number(client.getBalance())});
 
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("Client Card", rows);
     }
 };
 

@@ -8,6 +8,7 @@
 #include "../../Global/Config.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 #include "../TransactionsScreens/DepositScreen.hpp"
 #include "../TransactionsScreens/TotalBalancesScreen.hpp"
 #include "../TransactionsScreens/TransferLogsScreen.hpp"
@@ -28,64 +29,36 @@ class TransactionsScreen : protected Screen {
    public:
     static void show_transactions_menu() {
         system(Config::clear.c_str());
-        draw_screen_header("console application");
+        draw_screen_header("Transactions Screen.");
         if (!has_permission(User::Permissions::Transacions)) {
             return;
         }
 
         std::vector<std::string> menus{
-            "Deposit.",        "Withdraw.",     "Transfer.",
-            "Total Balances.", "Trasfer Logs.", "Main Menu",
+            " Deposit.",        " Withdraw.",     " Transfer.",
+            " Total Balances.", " Trasfer Logs.", " Main Menu",
         };
 
-        Table table{"Transactions Menu"};
-        table.add_column("#", 4, Table::Align::Center);
+        Table table{"Menu"};
+        table.add_column("No.", 4, Table::Align::Center);
         table.add_column(" Options", 64, Table::Align::Center);
 
         table.setAlignment(25);
         for (short i = 0; i < menus.size(); i++) {
-            table.add_row({std::to_string(i + 1), menus[i]});
+            std::string num = String::zfill(std::to_string(i + 1), 2);
+            table.add_row({num, menus[i]});
         }
         table.print_menu();
         perform_transactions_menu_option(
-            (TransactionsMenuOptions)read_transactions_menu_option(
-                menus.size()));
+            (TransactionsMenuOptions)ScreenHelper::read_option_enum(
+                "Please choose option: ", menus.size()));
     }
 
    private:
     static void back_to_transactions_menu() {
-        // if (std::cin.fail() || std::cin.peek() != '\n') {
-        Util::clear_buffer();
-        // }
-        std::cout << "Press enter to go back to Transactions Menu...";
-        std::cin.get();
-        show_transactions_menu();
-    }
-
-    static short read_transactions_menu_option(short max) {
-        bool valid = false;
-        short choice;
-        std::cout << std::setw(37) << std::left << ""
-                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
-        while (!valid) {
-            std::cin >> choice;
-            valid = InputValidate::is_valid();
-            if (!valid) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Invalid Input") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                continue;
-            }
-            if (!InputValidate::in_range<short>(choice, 1, max)) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Input Out Of Range") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                valid = false;
-            }
-        }
-        return choice - 1;
+        ScreenHelper::back_to_selected_screen(
+            "Press enter to go back to Transactions Menu...",
+            show_transactions_menu);
     }
 
     static void show_deposit_screen() {

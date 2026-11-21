@@ -10,7 +10,6 @@
 #include "../Global/ResultStatus.hpp"
 #include "../Utils/String.hpp"
 #include "Files.hpp"
-#include "Property.hpp"
 
 class Currency {
    private:
@@ -36,13 +35,7 @@ class Currency {
     std::string getCurrencyName() { return currency_name_; }
     float getRate() { return rate_; }
 
-    // properties function
-    Property<std::string> country{[this]() { return getCountry(); }};
-    Property<std::string> currency_code{[this]() { return getCurrencyCode(); }};
-    Property<std::string> currency_name{[this]() { return getCurrencyName(); }};
-    Property<float> rate{[this]() { return getRate(); }};
-
-    // functions
+     // functions
     bool is_empty() { return mode_ == ObjectMode::Empty; }
 
     static Currency get_empty_object() {

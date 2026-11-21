@@ -9,6 +9,7 @@
 #include "../../Utils/NumberToWords.hpp"
 #include "../../Utils/Util.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class TotalBalancesScreen : protected Screen {
    public:
@@ -41,7 +42,7 @@ class TotalBalancesScreen : protected Screen {
                 table.add_row({
                     " " + client.getAccountNumber(),
                     " " + client.getFullName(),
-                    " " + format_balance(std::to_string(client.getBalance())),
+                    " " + ScreenHelper::format_number(client.getBalance()),
                 });
             }
             table.print_table();
@@ -53,20 +54,6 @@ class TotalBalancesScreen : protected Screen {
     }
 
    private:
-    static std::string format_balance(std::string balance) {
-        short zero = 0;
-        for (short i = short(balance.find(".")); i < balance.size(); i++) {
-            if (zero == 3) {
-                return balance.substr(0, i - 1);
-            }
-            if (balance[i] == '0') {
-                zero++;
-            } else {
-                zero = 0;
-            }
-        }
-        return "0.0";
-    };
 };
 
 #endif  // CLASS_TOTAL_BALANCES_SCREEN_HPP

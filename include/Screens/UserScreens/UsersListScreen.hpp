@@ -23,6 +23,12 @@ class UsersListScreen : protected Screen {
         Table table{title, subtitle};
         table.setAlignment(11);
 
+        if (users.size() == 0) {
+            table.panel(
+                {Color::bright_red("No Users Available In The System!")}, 95,
+                Table::Align::Center, true);
+        }
+
         table.add_column("User Name", 11, Table::Align::Center);
         table.add_column("Full Name", 25, Table::Align::Center);
         table.add_column("Phone", 12, Table::Align::Center);
@@ -30,21 +36,20 @@ class UsersListScreen : protected Screen {
         table.add_column("Password", 10, Table::Align::Center);
         table.add_column("Permissions", 12, Table::Align::Center);
 
-        if (users.size() == 0) {
-            table.panel(
-                {Color::bright_red("No Users Available In The System!")}, 95,
-                Table::Align::Center, true);
-
-        } else {
-            for (User user : users) {
-                table.add_row(
-                    {user.getUserName(), user.getFullName(), user.getPhone(),
-                     user.getEmail(), user.getPassword(),
-                     std::to_string(user.getPermissions())},
-                    Table::Align::Center);
-            }
-            table.print_table();
+        for (User user : users) {
+            table.add_row({
+                " " + user.getUserName(),
+                " " + user.getFullName(),
+                " " + user.getPhone(),
+                " " + user.getEmail(),
+                " " + (CurrentUser.is_admin()
+                           ? Util::decrypt(user.getPassword(),
+                                           Config::encryptionKey)
+                           : user.getPassword()),
+                " " + std::to_string(user.getPermissions()),
+            });
         }
+        table.print_table();
     }
 };
 

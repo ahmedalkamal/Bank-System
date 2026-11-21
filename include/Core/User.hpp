@@ -15,7 +15,6 @@
 #include "Date.hpp"
 #include "Files.hpp"
 #include "Person.hpp"
-#include "Property.hpp"
 
 class User : public Person {
    private:
@@ -80,16 +79,10 @@ class User : public Person {
         }
     }
     void setPermissions(short value) {
-        // if (value) {
-        //     return;
-        // }
         if (this->permissions_ != value) {
             this->permissions_ = value;
         }
     }
-    // Date::DateInfo setLoginDate(Date::DateInfo value) {
-    //     this->login_date_ = value;
-    // }Available
 
     // getter functions
     std::string getUserName() { return this->username_; }
@@ -97,21 +90,8 @@ class User : public Person {
     short getPermissions() { return this->permissions_; }
     bool is_deleted() { return this->was_deleted; }
     bool is_admin() { return getPermissions() == (short)Permissions::Admin; }
-    // Date::DateInfo getLoginDate() { return this->login_date_; }
-
-    // properties get and set
-    Property<std::string> username{
-        [this]() { return getUserName(); },
-        [this](const std::string& value) { setUserName(value); }};
-    Property<std::string> password{
-        [this]() { return getPassword(); },
-        [this](const std::string& value) { setPassword(value); }};
-    Property<short> permissions{
-        [this]() { return getPermissions(); },
-        [this](const short& value) { setPermissions(value); }};
 
     // functions
-
     static User get_addnew_object(std::string username) {
         return {
             User::ObjectMode::AddNew,  // mode
@@ -139,6 +119,7 @@ class User : public Person {
         }
         return {{}, login_logs.status_code};
     }
+
     static Status<std::vector<User>> get_users_list() {
         std::vector<User> objects;
 
@@ -146,18 +127,6 @@ class User : public Person {
             objects.push_back(convert_to_object(pair.second));
         }
         return {objects, StatusCode::None};
-
-        // Files users_file{Config::users_file};
-        // Status<std::vector<std::string>> users_date =
-        //     users_file.load_data_list();
-
-        // if (users_date.issuccessful()) {
-        //     for (std::string& dataline : users_date.response) {
-        //         objects.push_back(convert_to_object(dataline));
-        //     }
-        //     return {objects, users_date.status_code};
-        // }
-        // return {{}, users_date.status_code};
     }
 
     static Status<User> find(std::string username) {
@@ -174,7 +143,8 @@ class User : public Person {
         Status<User> object = User::find(username);
         if (object.issuccessful()) {
             if (object.response.getUserName() == username) {
-                if (object.response.getPassword() == password) {
+                if (Util::decrypt(object.response.getPassword(),
+                                  Config::encryptionKey) == password) {
                     return object;
                 }
             }
@@ -261,7 +231,6 @@ class User : public Person {
     short permissions_;
 
     bool was_deleted = false;
-    // Date::DateInfo login_date_;
 
     static User get_empty_object() {
         return {
@@ -275,27 +244,24 @@ class User : public Person {
         std::vector<std::string> client_info = String::split(line, sep);
 
         return User{
-            User::ObjectMode::Update,              // mode
-            client_info.at(0),                     // first name
-            client_info.at(1),                     // last name
-            client_info.at(2),                     // email
-            client_info.at(3),                     // phone
-            client_info.at(4),                     // username
-            Util::decrypt(client_info.at(5), 12),  // password
-            (short)std::stoi(client_info.at(6)),   // permissions
+            User::ObjectMode::Update,             // mode
+            client_info.at(0),                    // first name
+            client_info.at(1),                    // last name
+            client_info.at(2),                    // email
+            client_info.at(3),                    // phone
+            client_info.at(4),                    // username
+            client_info.at(5),                    // password
+            (short)std::stoi(client_info.at(6)),  // permissions
         };
     }
     static std::vector<std::string> convert_to_vector(User object) {
-        // if (object.is_empty()) {
-        //     return {};
-        // }
         return {
             object.getFirstName(),
             object.getLastName(),
             object.getEmail(),
             object.getPhone(),
             object.getUserName(),
-            Util::encrypt(object.getPassword(), 12),
+            Util::encrypt(object.getPassword(), Config::encryptionKey),
             std::to_string(object.getPermissions()),
         };
     }
@@ -336,8 +302,6 @@ class User : public Person {
     }
 
     void update() {
-        // std::map<std::string, std::string> UsersMap = load_users_map();
-
         if (UsersMap.find(getUserName()) != UsersMap.end()) {
             UsersMap.at(getUserName()) = convert_to_dataline(*this);
             users_file.update_file(get_users_dataline());

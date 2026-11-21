@@ -8,6 +8,7 @@
 #include "../../Core/BankClient.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class TransferLogsScreen : protected Screen {
    public:
@@ -48,32 +49,16 @@ class TransferLogsScreen : protected Screen {
     }
 
    private:
-    static std::string format_balance(std::string balance) {
-        short zero = 0;
-        for (short i = short(balance.find(".")); i < balance.size(); i++) {
-            if (zero == 3) {
-                return balance.substr(0, i - 1);
-            }
-            if (balance[i] == '0') {
-                zero++;
-            } else {
-                zero = 0;
-            }
-        }
-        return "0.0";
-    };
-
     static std::vector<std::string> get_transfer_log(
         BankClient::TransferLog log) {
         std::vector<std::string> record;
         record.push_back(" " + log.Time);
         record.push_back(" " + log.SenderAccountNumber);
         record.push_back(" " + log.RecipientAccountNumber);
-        record.push_back(" " + format_balance(std::to_string(log.amount)));
+        record.push_back(" " + ScreenHelper::format_number(log.amount));
+        record.push_back(" " + ScreenHelper::format_number(log.SenderBalance));
         record.push_back(" " +
-                         format_balance(std::to_string(log.SenderBalance)));
-        record.push_back(" " +
-                         format_balance(std::to_string(log.RecipientBalance)));
+                         ScreenHelper::format_number(log.RecipientBalance));
         record.push_back(" " + log.Username);
 
         return record;

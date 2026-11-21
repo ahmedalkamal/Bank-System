@@ -3,12 +3,14 @@
 
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "../../Core/BankClient.hpp"
 #include "../../Core/User.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class FindClientScreen : protected Screen {
    public:
@@ -18,18 +20,11 @@ class FindClientScreen : protected Screen {
             return;
         }
 
-        std::string account_number = "";
-
-        std::cout << std::setw(30) << std::left << "";
-        std::cout << "[+] Please Enter Account Number: ";
-        account_number = InputValidate::read_template<std::string>();
-        // while (!BankClient::is_client_exist(account_number)) {
-        //     std::cout << "\n" << std::setw(30) << std::left << "";
-        //     account_number = InputValidate::read_template<std::string>(
-        //         "[+] " +
-        //         Color::bright_yellow("Account Number is not found") +
-        //         ", choose another one: ");
-        // }
+        std::string account_number = ScreenHelper::read_object_id<BankClient>(
+            "Account Number", true, BankClient::find);
+        if (account_number.empty()) {
+            return;
+        }
 
         BankClient client = BankClient::find(account_number).response;
         if (!client.is_empty()) {
@@ -46,20 +41,17 @@ class FindClientScreen : protected Screen {
 
    private:
     static void print_client_card(BankClient client) {
-        Table table{"Client Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({" Full Name     ", " " + client.getFullName()});
-        table.add_row({" Email         ", " " + client.getEmail()});
-        table.add_row({" Phone         ", " " + client.getPhone()});
-        table.add_row({" Account Number", " " + client.getAccountNumber()});
-        table.add_row({" Pin Code      ", " " + client.getPinCode()});
-        table.add_row(
-            {" Balance       ", " " + std::to_string(client.getBalance())});
+        rows.insert({"Full Name", client.getFullName()});
+        rows.insert({"Email", client.getEmail()});
+        rows.insert({"Phone", client.getPhone()});
+        rows.insert({"Account Number", client.getAccountNumber()});
+        rows.insert({"Pin Code", client.getPinCode()});
+        rows.insert(
+            {"Balance", ScreenHelper::format_number(client.getBalance())});
 
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("Client Card", rows);
     }
 };
 

@@ -15,7 +15,11 @@ class UpdateCurrencyScreen : protected Screen {
     static void show_update_currency_screen() {
         draw_screen_header("Update Currency Screen.");
 
-        Currency currency = get_currency();
+        std::string currency_code = ScreenHelper::read_object_id<Currency>(
+            "Currency Code: ", true, Currency::find_by_code);
+        if (currency_code.empty()) return;
+
+        Currency currency = Currency::find_by_code(currency_code).response;
         if (currency.is_empty()) {
             std::cout << std::setw(30) << std::left << "";
             std::cout << "[!] " +
@@ -23,12 +27,13 @@ class UpdateCurrencyScreen : protected Screen {
             return;
         }
 
-        print_currency(currency);
+        print_currency_card(currency);
         float currency_rate = currency.getRate();
 
         std::cout << "\n" << std::setw(30) << std::left << "";
         char answer = InputValidate::read_template<char>(
             "[?] Are you sure want to update the rate of  this Currency y/n: ");
+
         if (std::tolower(answer) == 'y') {
             std::cout << "\n" << std::setw(30) << std::left << "";
 
@@ -41,7 +46,7 @@ class UpdateCurrencyScreen : protected Screen {
                 std::cout << "[+] " +
                                  Color::bright_green(
                                      "Currency Rate Updated Successfully :)\n");
-                print_currency(currency);
+                print_currency_card(currency);
             } else {
                 std::cout << "[!] " + Color::bright_red(
                                           "Currency Rate was not Updated!\n\n");
@@ -50,43 +55,16 @@ class UpdateCurrencyScreen : protected Screen {
     }
 
    private:
-    static Currency get_currency() {
-        std::string currency_code = "";
+    static void print_currency_card(Currency currency) {
+        std::map<std::string, std::string> rows;
 
-        std::cout << std::setw(30) << std::left << "";
-        std::cout << "[+] Please enter currency code : ";
-        std::cin >> currency_code;
-        return Currency::find_by_code(currency_code).response;
-    }
+        rows.insert({"Country", currency.getCountry()});
+        rows.insert({"Code", currency.getCurrencyCode()});
+        rows.insert({"Name", currency.getCurrencyName()});
+        rows.insert(
+            {"Rate(1$)", ScreenHelper::format_number(currency.getRate())});
 
-    static std::string format_balance(std::string balance) {
-        short zero = 0;
-        for (short i = short(balance.find(".")); i < balance.size(); i++) {
-            if (zero == 3) {
-                return balance.substr(0, i - 1);
-            }
-            if (balance[i] == '0') {
-                zero++;
-            } else {
-                zero = 0;
-            }
-        }
-        return "0.0";
-    };
-
-    static void print_currency(Currency currency) {
-        Table table{"Currency Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
-
-        table.add_row({" Country", " " + currency.getCountry()});
-        table.add_row({" Code", " " + currency.getCurrencyCode()});
-        table.add_row({" Name", " " + currency.getCurrencyName()});
-        table.add_row({" Rate(1$)", " " + format_balance(std::to_string(
-                                              currency.getRate()))});
-
-        table.setAlignment(25);
-        table.print_table();
+        ScreenHelper::print_object_card("Currency Card", rows);
     }
 };
 

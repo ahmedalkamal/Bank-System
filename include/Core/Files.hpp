@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "../Global/ResultStatus.hpp"
-#include "Property.hpp"
 
 class Files {
    public:
@@ -32,13 +31,6 @@ class Files {
     // getter functions
     std::string getFilePath() { return this->file_path_; }
     // std::vector<std::string> getBackUp() { return this->backup_; }
-
-    // properties get and set
-    Property<std::string> file_path{
-        [this]() { return getFilePath(); },
-        [this](const std::string& value) { setFilePath(value); }};
-    // Property<std::vector<std::string>> backup{[this]() { return getBackUp();
-    // }};
 
     // functions
     // bool change_safe_mode(bool value) {

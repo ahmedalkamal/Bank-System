@@ -2,27 +2,23 @@
 #define CLASS_DEPOSIT_SCREEN_HPP
 
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "../../Core/BankClient.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 
 class DepositScreen : protected Screen {
    public:
     static void show_deposit_screen() {
         draw_screen_header("Deposit Screen.");
 
-        std::string account_number = read_account_number();
+        std::string account_number = ScreenHelper::read_object_id(
+            "Account Number", true, BankClient::find);
+        if (account_number.empty()) return;
 
-        while (!BankClient::is_client_exist(account_number)) {
-            std::cout << std::setw(30) << std::left << "";
-            std::cout << "[!]" + Color::bright_yellow(
-                                     "Client with [" +
-                                     Color::bright_red(account_number) +
-                                     "] does not exist.\n");
-            account_number = read_account_number();
-        }
         BankClient client = BankClient::find(account_number).response;
         print_client_card(client);
 
@@ -36,55 +32,44 @@ class DepositScreen : protected Screen {
         std::cout << "[?] Are you sure you want to perform this transactions? ";
         std::cin >> answer;
 
-        if (std::tolower(answer) == 'y') {
-            if (client.deposit(amount).response) {
-                std::cout << std::setw(30) << std::left << "";
-                std::cout << "[#] " + Color::bright_green(
-                                          "Amount Deposit Successfully.\n");
+        if (std::tolower(answer) != 'y') {
+            std::cout << std::setw(30) << std::left << ""
+                      << "[#] Operation was cancelled.\n";
+            return;
+        }
 
-                std::cout << std::setw(30) << std::left << "";
-                std::cout << "[#] New Balance is : " << client.getBalance()
-                          << std::endl;
-            } else {
-                std::cout << std::setw(30) << std::left << "";
-                std::cout << "[!] " +
-                                 Color::bright_red(
-                                     "Cannot Deposit with negative balance!\n");
-                std::cout << std::setw(30) << std::left << "";
-                std::cout << "[!] " +
-                                 Color::bright_yellow("Amount to deposit is:")
-                          << amount;
-            }
+        if (client.deposit(amount).response) {
+            std::cout << std::setw(30) << std::left << "";
+            std::cout << "[#] " + Color::bright_green(
+                                      "Amount Deposit Successfully.\n");
+
+            std::cout << std::setw(30) << std::left << "";
+            std::cout << "[#] New Balance is : " << client.getBalance()
+                      << std::endl;
         } else {
             std::cout << std::setw(30) << std::left << "";
-            std::cout << "[#] Operation was cancelled.\n";
+            std::cout << "[!] " +
+                             Color::bright_red(
+                                 "Cannot Deposit with negative balance!\n");
+            std::cout << std::setw(30) << std::left << "";
+            std::cout << "[!] " + Color::bright_yellow("Amount to deposit is:")
+                      << amount;
         }
     }
 
    private:
     static void print_client_card(BankClient client) {
-        Table table{"Client Card."};
-        table.add_column("", 16);
-        table.add_column(" info ", 45, Table::Align::Center);
+        std::map<std::string, std::string> rows;
 
-        table.add_row({" Full Name     ", " " + client.getFullName()});
-        table.add_row({" Email         ", " " + client.getEmail()});
-        table.add_row({" Phone         ", " " + client.getPhone()});
-        table.add_row({" Account Number", " " + client.getAccountNumber()});
-        table.add_row({" Pin Code      ", " " + client.getPinCode()});
-        table.add_row(
-            {" Balance       ", " " + std::to_string(client.getBalance())});
+        rows.insert({"Full Name", client.getFullName()});
+        rows.insert({"Email", client.getEmail()});
+        rows.insert({"Phone", client.getPhone()});
+        rows.insert({"Account Number", client.getAccountNumber()});
+        rows.insert({"Pin Code", client.getPinCode()});
+        rows.insert(
+            {"Balance", ScreenHelper::format_number(client.getBalance())});
 
-        table.setAlignment(25);
-        table.print_table();
-    }
-
-    static std::string read_account_number() {
-        std::string account_number = "";
-        std::cout << std::setw(30) << std::left << "";
-        std::cout << "[+] Please enter account number: ";
-        std::cin >> account_number;
-        return account_number;
+        ScreenHelper::print_object_card("Client Card", rows);
     }
 };
 

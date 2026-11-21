@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "../Core/Property.hpp"
-
 class _utli_class_string_hpp {
    public:
 };
@@ -40,10 +38,6 @@ class String {
         }
     }
     std::string getValue() { return this->_value; }
-
-    Property<std::string> value{
-        [this]() { return getValue(); },
-        [this](const std::string value) { setValue(value); }};
 
     // functions to change character case... done
     // friend std::string upper(std::string value);

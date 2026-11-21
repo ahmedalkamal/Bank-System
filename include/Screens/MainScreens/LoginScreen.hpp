@@ -1,16 +1,13 @@
 #ifndef CLASS_LOGIN_SCREEN_HPP
 #define CLASS_LOGIN_SCREEN_HPP
 
-#include <ctime>
 #include <iomanip>
 #include <iostream>
-#include <string>
 
 #include "../../Core/User.hpp"
 #include "../../Global/Config.hpp"
 #include "../../Global/Sessions.hpp"
 #include "../../Utils/Color.hpp"
-#include "../../Utils/Table.hpp"
 #include "../Screen.hpp"
 #include "FirstUse.hpp"
 #include "MainScreen.hpp"

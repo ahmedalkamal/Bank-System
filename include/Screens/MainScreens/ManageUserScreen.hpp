@@ -9,6 +9,7 @@
 #include "../../Global/Config.hpp"
 #include "../../Utils/InputValidate.hpp"
 #include "../Screen.hpp"
+#include "../ScreenHelper.hpp"
 #include "../UserScreens/AddNewUserScreen.hpp"
 #include "../UserScreens/DeleteUserScreen.hpp"
 #include "../UserScreens/FindUserScreen.hpp"
@@ -31,7 +32,7 @@ class ManageUsersScreen : protected Screen {
    public:
     static void show_manage_users_menu() {
         system(Config::clear.c_str());
-        draw_screen_header("console application");
+        draw_screen_header("Manage Users Screen.");
         if (!has_permission(User::Permissions::ManageUsers)) {
             return;
         }
@@ -41,54 +42,27 @@ class ManageUsersScreen : protected Screen {
             " Find User.",  " Setting.",      " Main Menu.",
         };
 
-        Table table{"Manage Users Menu"};
-        table.add_column("#", 4, Table::Align::Center);
+        Table table{"Menu"};
+        table.add_column("No.", 4, Table::Align::Center);
         table.add_column(" Options", 64, Table::Align::Center);
 
         table.setAlignment(25);
         for (short i = 0; i < menus.size(); i++) {
-            table.add_row({std::to_string(i + 1), menus[i]});
+            std::string num = String::zfill(std::to_string(i + 1), 2);
+            table.add_row({num, menus[i]});
         }
         table.print_menu();
 
         perform_manage_user_menu_option(
-            (ManageUsersOptions)read_manage_users_menu_option(menus.size()));
+            (ManageUsersOptions)ScreenHelper::read_option_enum(
+                "Please choose option: ", menus.size()));
     }
 
    private:
     static void back_to_manage_users_menu() {
-        // if (std::cin.fail() || std::cin.peek() != '\n') {
-        Util::clear_buffer();
-        // }
-        std::cout << "\n\nPress enter to go back to Manage Users Menu...";
-        std::cin.get();
-        show_manage_users_menu();
-    }
-
-    static short read_manage_users_menu_option(short max) {
-        bool valid = false;
-        short choice;
-        std::cout << std::setw(37) << std::left << ""
-                  << "[+] Choose what do you want to do [1 - " << max << "]: ";
-        while (!valid) {
-            std::cin >> choice;
-            valid = InputValidate::is_valid();
-            if (!valid) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Invalid Input") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                continue;
-            }
-            if (!InputValidate::in_range<short>(choice, 1, max)) {
-                std::cout << std::setw(37) << std::left << ""
-                          << Color::yellow("[!] Input Out Of Range") +
-                                 ", Enter again [1 - "
-                          << max << "]: ";
-                valid = false;
-            }
-        }
-        return choice - 1;
+        ScreenHelper::back_to_selected_screen(
+            "Press enter to go back to Manage Users Menu...",
+            show_manage_users_menu);
     }
 
     static void show_list_users_screen() {
